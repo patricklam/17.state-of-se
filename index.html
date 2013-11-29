@@ -26,7 +26,13 @@
             h1 {
                 font-weight: 400;
                 height: 5%;
+	    }
+	    .reveal h1 {
+	        margin-bottom: 60px;
             }
+	    .reveal p {
+	        text-align:left;
+	    }
             #canvas {
                 height: 480px;
                 margin: 0 auto;
@@ -48,40 +54,77 @@
     <body>
         <div class="reveal">
           <div class="slides">
-		  <section>
-           <h1 style="font-size:58px">RR-TM: Improving Concurrency for Eager Software Transactional Memory</h1>
+<!--------------------------------------------->
+	  <section>
+           <h1 style="font-size:58px">RR-TM: Improving Concurrency for<br> Eager Software Transactional Memory</h1>
            <p>Gaurav Jain and Patrick Lam</p>
            <p>University of Waterloo</p>
 		   <p>December 2, 2013</p>
-		  </section>
+	  </section>
+<!--------------------------------------------->
+
           <section>
            <h1>Situation</h1>
            <p><div id="linked-list"></div></p>
            <div>
-            <div style="display:inline">
-			  <pre><code data-trim>
-  atomic {
-    process(3);
+             <div>
+	       <pre><code data-trim>
+  <span class="fragment">atomic </span>
+  {
+    process(n4);
   }
-			  </code></pre>
-			</div>
-            <p>implies the following operations:</p>
-			<div style="display:inline">
-              <pre><code data-trim>
+	       </code></pre>
+	     </div>
+             <div class="fragment">
+               <p>implies the following operations:</p>
+	       <div>
+		 <pre><code data-trim>
   atomic {
-    n = READ head
-    n = READ n.next
-    n = READ n.next
-    n = READ n.next
-    process(n)
+    READ head
+    READ n1.next
+    READ n2.next
+    READ n3.next
+    process(n4)
   }
-		   </div>
+	       </code></pre>
+	       </div>
+	     </div>
+	   </div>
           </section>
-		  </div>
-		</div>
+<!--------------------------------------------->
 
-		<script src="lib/js/head.min.js"></script>
-		<script src="js/reveal.min.js"></script>
+          <section>
+           <h1>Contention</h1>
+
+	   <p>Let's throw in a WRITE.</p>
+	    <div style="display:inline-block; width:10em">
+              <pre><code class="ruby">
+  atomic {
+    WRITE n1.next
+  }
+	      </code></pre>
+	    </div>
+	    <div style="display:inline-block; width:10em">
+              <pre><code>
+  atomic {
+    READ head
+    READ n1.next
+    READ n2.next
+    READ n3.next
+    process(n4)
+  }
+	      </code></pre>
+	    </div>
+	    <p style="margin-top:1em" class="reveal">Eager STM = unmediated WRITEs; go directly to memory.</p>
+	    <p>READer can stall or abort.</p>
+
+          </section>
+
+	  </div>
+	  </div>
+
+	  <script src="lib/js/head.min.js"></script>
+	  <script src="js/reveal.min.js"></script>
         <script>
 /* from graffle.js example */
 Raphael.fn.connection = function (obj1, obj2, line, bg) {
@@ -151,7 +194,7 @@ window.onload = function () {
         labels = [],
         shapes = [];
     for (var i = 0; i < 4; i++) {
-		labels.push(r.text(i*150+75, 50, i.toString()).attr({"font-size": 20}));
+		labels.push(r.text(i*150+75, 50, "n"+(i+1).toString()).attr({"font-size": 20}));
         shapes.push(r.ellipse(i*150+75, 50, 20, 20));
         if (i > 0) connections.push(r.connection(shapes[i-1], shapes[i], "#000"));
     }
@@ -167,7 +210,7 @@ Reveal.initialize({
         progress: true,
 
         // Push each slide change to the browser history
-        history: false,
+        history: true,
 
         // Enable keyboard shortcuts for navigation
         keyboard: true,
