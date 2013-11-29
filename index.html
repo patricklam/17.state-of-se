@@ -162,17 +162,86 @@
           <section>
            <h1>Key idea: reservations and releases</h1>
 
-	   <p style="padding-bottom:1em">We introduce the notions of <em>reservations</em> and <em>releases</em>.</p>
-
-	   <p style="padding-bottom:1em">Recall: a TM_WRITE locks out readers until commit or abort.<br>
-	     Implication: subsequent accesses need not go through runtime.</p>
-
-	   <p>A <em>write reservation</em> locks out readers, without an actual write.</p>
+	   <p style="padding-bottom:0.5em">We introduce the notions of <em>reservations</em> and <em>releases</em>.</p>
+	   
 	   <ul>
-	     <li>Can be done ahead of time, before the access.</li>
+	     <li>Reservations secure access to memory.</li>
+	     <li>Releases allow others to access memory.</li>
 	   </ul>
 
-          </section>
+	  </section>
+
+<!--------------------------------------------->
+
+          <section>
+	    <section>
+              <h1>Memory reservations</h1>
+	      
+	      <p style="padding-bottom:1em">Recall: a TM_WRITE locks out readers until it commits or aborts.<br>
+		Implication: subsequent accesses need not go through runtime.</p>
+	      
+	      <p>Two types of reservations: write and read.</p>
+	    </section>
+
+<!--------------------------------------------->
+
+            <section>
+              <h1>Write reservations</h1>
+
+
+	      <p>A <em>write reservation</em> locks out readers, without an actual write.</p>
+	      <ul>
+		<li>Can be done ahead of time, before the access.</li>
+	      </ul>
+
+	      <div style="display:inline-block; width:11em">
+		<pre><code class="ruby">
+  atomic {
+    TM_WRITE_RESERVE n1.next
+    n1.next = null
+  }
+		</code></pre>
+	      </div>
+	      <div style="display:inline-block; width:13.5em">
+		<pre><code class="ruby C">
+  atomic {
+    TM_READ head
+    TM_READ n1.next  # stall or abort
+  }
+		</code></pre>
+	      </div>
+
+	      <p>After a write reserve, thread may directly write to memory.</p>
+	      
+            </section>
+
+            <section>
+              <h1>Read reservations</h1>
+
+	      <p>Similarly, a <em>read reservation</em> prevents concurrent writes,<br>
+	         enabling direct reads.</p>
+
+	      <div style="display:inline-block; width:13.5em">
+		<pre><code class="ruby C">
+  atomic {
+    TM_READ_RESERVE head
+    x = head
+    ...
+    y = head
+  }
+		</code></pre>
+	      </div>
+	      <p style="margin-bottom:1em">Transactions may concurrently read reserve an address.</p>
+	      <p>Writers must stall or abort.</p>
+
+	    </section>
+
+	    <section>
+	      <h1>Implications of reservations</h1>
+	    </section>
+
+	  </section>
+
 <!--------------------------------------------->
 
 
