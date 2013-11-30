@@ -211,10 +211,11 @@
 		</code></pre>
 	      </div>
 
-	      <p>After a write reserve, thread may directly write to memory.</p>
+	      <p>After a write reserve, a thread may directly write to memory.</p>
 	      
             </section>
 
+<!--------------------------------------------->
             <section>
               <h1>Read reservations</h1>
 
@@ -236,14 +237,125 @@
 
 	    </section>
 
+<!--------------------------------------------->
 	    <section>
 	      <h1>Implications of reservations</h1>
+
+	      <p>Enable unmediated access to memory.</p>
+	      <ul style="margin-bottom:1em">
+	      <li>Eliminate overhead due to TM_READ, TM_WRITE calls.</li>
+	      <li>Especially useful for repeated re-reads in a loop.</li>
+	      </ul>
+	      <p>Path-sensitive compiler analyses can use reservations to optimize code.</p>
 	    </section>
 
 	  </section>
 
 <!--------------------------------------------->
+<!--------------------------------------------->
 
+          <section>
+	    <section>
+              <h1>Memory releases</h1>
+	      
+	      <p style="padding-bottom:1em">As seen until now, reservations persist until commit or abort.</p>
+	      
+	      <p>A <em>release</em> signals that a transaction is done with an address.</p>
+	      <ul style="margin-bottom:1em">
+	      <li>Only applicable to read reservations.</li>
+	      <li>Allows other threads to write the address.</li>
+	      </ul>
+	    </section>
+
+<!--------------------------------------------->
+	    <section>
+              <h1>Memory release example</h1>
+
+		<pre><code class="ruby C">
+  atomic {
+    {
+      Node n = TM_READ head->next
+      TM_READ_RESERVE n
+      # access n directly and repeatedly
+      TM_RELEASE n
+
+      # n goes out of scope
+    }
+    # more processing, but no more accesses to n
+  }
+		</code></pre>
+
+	    </section>
+<!--------------------------------------------->
+	    <section>
+              <h1>Accesses after releases</h1>
+
+	      <p style="margin-bottom:1em">A transaction may regain access to an address after releasing it.</p>
+
+	      <p>If another transaction has reserved the address, re-reader must abort.</p>
+	    </section>
+
+<!--------------------------------------------->
+
+	    <section>
+              <h1>Reservations and releases <br> reduce instrumentation</h1>
+
+	      <div style="display:inline-block; width:13em">
+		<pre><code class="C">int a, b, c, d;
+
+int bar(int& x) {
+ return TM_READ(&x)+1;
+}
+
+int foo() {
+ TM_WRITE(&a, 2);
+ TM_WRITE(&b, 2);
+ if (TM_READ(&d) >= 0) {
+  TM_WRITE(&b, TM_READ(&c) + 
+                 TM_READ(&d));
+ } else {
+  TM_WRITE(&a, bar(b));
+ }
+ return TM_READ(&a) + TM_READ(&b);
+}		</code></pre>
+	      </div>
+	      <div style="display:inline-block; width:13.2em">
+		<pre><code class="C">int a, b, c, d;
+
+int bar(int& x) { return x+1; }
+
+int foo() {
+ TM_WRITE_RESERVE(&a);
+ TM_WRITE_RESERVE(&b);
+ bool release = TM_READ_RESERVE(&d);
+ if (d > 0) {
+  a = 2;
+  b = TM_READ_RELEASE(&c) + d;
+ } else {
+  b = 2; a = bar(b);
+ }
+ if (release)
+  TM_RELEASE(&d);
+ return a + b; }</code></pre>
+	      </div>
+
+	    </section>
+
+	  </section>
+<!--------------------------------------------->
+<!--------------------------------------------->
+	    <section>
+              <h1>Implications of reserves and releases</h1>
+
+	      <p>Key contribution: reserves and releases, together, allow temporary privatization of memory.</p>
+
+	      <p>Goal: minimize writer lock-out.</p>
+
+	      <p>RR-TM solves large read sets stalling writers.</p>
+
+	      <p>Mechanism: commit-time validationa nd reader aborts.</p>
+	    </section>
+<!--------------------------------------------->
 
 	  </div>
 	  </div>
