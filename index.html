@@ -69,25 +69,20 @@
            <p><div id="linked-list"></div></p>
            <div>
              <div>
-	       <pre><code data-trim>
-  <span class="fragment">atomic </span>
-  {
+	       <pre><code data-trim><!--  <span class="fragment">atomic </span>-->  {
     process(n4);
-  }
-	       </code></pre>
+  }</code></pre>
 	     </div>
              <div class="fragment">
                <p>implies the following operations:</p>
 	       <div>
-		 <pre><code data-trim>
-  atomic {
-    TM_READ head
-    TM_READ n1.next
-    TM_READ n2.next
-    TM_READ n3.next
+		 <pre><code data-trim>  <!--atomic -->{
+    READ head
+    READ n1.next
+    READ n2.next
+    READ n3.next
     process(n4)
-  }
-	       </code></pre>
+  }</code></pre>
 	       </div>
 	     </div>
 	   </div>
@@ -97,8 +92,9 @@
           <section>
            <h1>Contention</h1>
 
-	   <p>Let's throw in a TM_WRITE.</p>
-	    <div style="display:inline-block; width:10em">
+	   <p>Let's add atomic blocks...<br>
+            <span class="fragment" style="padding-left:2em" data-fragment-index="2">... and throw in a TM_WRITE.</span></p>
+	    <div style="display:inline-block; width:10em" class="fragment" data-fragment-index="2">
               <pre><code class="ruby">
   atomic {
     TM_WRITE n1.next
@@ -107,15 +103,17 @@
 	    </div>
 	    <div style="display:inline-block; width:10em">
               <pre><code>
-  atomic {
+<span class="fragment" data-fragment-index="1"> atomic { </span>
     TM_READ head
     TM_READ n1.next
     TM_READ n2.next
     TM_READ n3.next
     process(n4)
-  }
+<span class="fragment" data-fragment-index="1">   } </span>
 	      </code></pre>
 	    </div>
+
+<p>Now what?</p>
           </section>
 <!--------------------------------------------->
 
@@ -288,11 +286,23 @@
 	    </section>
 <!--------------------------------------------->
 	    <section>
-              <h1>Accesses after releases</h1>
+              <h1>Regaining access after a release</h1>
 
 	      <p style="margin-bottom:1em">A transaction may regain access to an address after releasing it.</p>
 
-	      <p>If another transaction has reserved the address, re-reader must abort.</p>
+		<pre><code class="ruby C">  atomic {
+    Node n = TM_READ head->next
+    TM_READ_RESERVE n
+    # access n directly and repeatedly
+    TM_RELEASE n
+
+    # ...
+
+    TM_READ_RESERVE n
+  }</code></pre>
+
+	      <p>If another transaction reserved the address meanwhile, <br> 
+             <span style="padding-right:1em">&nbsp;</span> re-reader must abort.</p>
 	    </section>
 
 <!--------------------------------------------->
@@ -344,17 +354,43 @@ int foo() {
 	  </section>
 <!--------------------------------------------->
 <!--------------------------------------------->
-	    <section>
-              <h1>Implications of reserves and releases</h1>
+      <section>
+		<section>
+          <h1>Implications of reserves and releases</h1>
 
-	      <p>Key contribution: reserves and releases, together, allow temporary privatization of memory.</p>
+	      <p>Motivating observation:</p>
+		  <ul style="margin-bottom:1em"> <li> Large read sets often stall writers.</li> </ul>
+		  
+	      <p style="margin-bottom:1em">Our Goal: minimize writer lock-out.</p>
+		  
+	      <p>Reserves and releases, together, allow temporary privatization of memory.</p>
+		  
+	      <p>Mechanism: commit-time validation and reader aborts.</p>
+		</section>
 
-	      <p>Goal: minimize writer lock-out.</p>
+<!--------------------------------------------->
+		<section>
+          <h1>Privatization</h1>
 
-	      <p>RR-TM solves large read sets stalling writers.</p>
+		</section>
 
-	      <p>Mechanism: commit-time validationa nd reader aborts.</p>
-	    </section>
+<!--------------------------------------------->
+		<section>
+          <h1>Optimizations That RR-TM Enables</h1>
+
+		  <ul> 
+			<li> write demotions </li>
+			<li> reserve dependencies </li>
+		  </ul>
+		</section>
+
+		<section>
+          <h1>RR-TM Optimizations</h1>
+
+		</section>
+
+	  </section>
+<!--------------------------------------------->
 <!--------------------------------------------->
 
 	  </div>
