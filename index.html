@@ -116,7 +116,7 @@
           <section>
 	    <h1>Eager vs lazy STM</h1>
 
-		<p style="margin-bottom:1em">Two ways to implement transactions.</p>
+		<p style="margin-bottom:1em">Two ways to implement software transactions.</p>
 
 	    <table style="font-size:smaller; padding-left:3em">
 	      <tr><td></td><th>Eager</th><th>Lazy</th></tr>
@@ -146,23 +146,38 @@
     process(n4)
   }	      </code></pre>
 	    </div>
-	    <p style="margin-top:1em" class="reveal">If TM_WRITE runs first, TM_READer must stall or abort.</p>
+		<div style="margin-top:1em">
+		<p>In eager systems:</p>
+	    <p style="padding-left:1em">If TM_WRITE runs first, TM_READer must stall or abort.</p>
+		</div>
 
           </section>
 <!--------------------------------------------->
 
-          <section>
-           <h1>Our key idea: reservations and releases</h1>
+		<section>
+          <h1>Implication of contention</h1>
 
-	   <p style="padding-bottom:0.5em">We introduce the notions of <em>reservations</em> and <em>releases</em>.</p>
-	   
-	   <ul>
-	     <li>Reservations secure access to memory.</li>
-	     <li>Releases allow others to access memory.</li>
-	   </ul>
+	      <p>Observe:</p>
+		  <ul style="margin-bottom:1em"> <li> Large read sets often stall writers.</li> </ul>
+		  
+	      <p>Our goal: minimize writer lock-out.</p>
+		  <p>How: reduce read set size.</span></p>
+		  
+		</section>
 
-	  </section>
+<!--------------------------------------------->
+		<section>
+		  <h1>How Privatization Works</h1>
 
+		  <p>Non-shared memory need not be accessed transactionally.</p>
+
+		  <div style="float:left"><img src="images/LED_Traffic_Light.jpg" style="border: 0"></div>
+		  <div>
+		  <p style="margin-top:60px"><span style="padding-left:1em"><em>reserve</em>: prohibits concurrent access.</span></p>
+		  <p style="margin-top:160px"><span style="padding-left:1em"><em>release</em>: permits concurrent access again.</span></p>
+		  </div>
+		</section>
+		  
 <!--------------------------------------------->
 
           <section>
@@ -355,33 +370,9 @@ int foo() {
 <!--------------------------------------------->
 <!--------------------------------------------->
       <section>
-		<section>
-          <h1>Implications of reserves and releases</h1>
-
-	      <p>Motivating observation:</p>
-		  <ul style="margin-bottom:1em"> <li> Large read sets often stall writers.</li> </ul>
-		  
-	      <p style="margin-bottom:1em">Goal: minimize writer lock-out.</p>
-		  <p>Mechanism: reduce read set size with privatization<br><span style="margin-left:1em"> (reserves and releases).</span></p>
-		  
-		</section>
-
 <!--------------------------------------------->
 		<section>
-		  <h1>How Privatization Works</h1>
-
-		  <p>Non-shared memory need not be accessed transactionally.</p>
-
-		  <div style="float:left"><img src="images/LED_Traffic_Light.jpg" style="border: 0"></div>
-		  <div>
-		  <p style="margin-top:60px"><span style="padding-left:1em"><em>reserve</em>: prohibits concurrent access.</span></p>
-		  <p style="margin-top:160px"><span style="padding-left:1em"><em>release</em>: permits concurrent access again.</span></p>
-		  </div>
-		</section>
-		  
-<!--------------------------------------------->
-		<section>
-		  <h1>Reservations, Releases, <br> and Privatization</h1>
+		  <h1>Ensuring serializability</h1>
 
 		  <p>When trying to write:</p>
 		  <ul style="margin-bottom:1em">
