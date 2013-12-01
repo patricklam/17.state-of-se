@@ -95,30 +95,28 @@
 	   <p>Let's add atomic blocks...<br>
             <span class="fragment" style="padding-left:2em" data-fragment-index="2">... and throw in a TM_WRITE.</span></p>
 	    <div style="display:inline-block; width:10em" class="fragment" data-fragment-index="2">
-              <pre><code class="ruby">
-  atomic {
+              <pre><code class="ruby">  atomic {
     TM_WRITE n1.next
-  }
-	      </code></pre>
+  }	      </code></pre>
 	    </div>
 	    <div style="display:inline-block; width:10em">
-              <pre><code>
-<span class="fragment" data-fragment-index="1"> atomic { </span>
+              <pre><code><span class="fragment" data-fragment-index="1"> atomic { </span>
     TM_READ head
     TM_READ n1.next
     TM_READ n2.next
     TM_READ n3.next
     process(n4)
-<span class="fragment" data-fragment-index="1">   } </span>
-	      </code></pre>
+<span class="fragment" data-fragment-index="1">   } </span>	      </code></pre>
 	    </div>
 
-<p>Now what?</p>
+<p class="fragment" data-fragment-index="2">Transactions guarantee <em>isolation</em> and <em>serializability</em>.</p>
           </section>
 <!--------------------------------------------->
 
           <section>
-	    <h1>Aside: Eager vs lazy STM</h1>
+	    <h1>Eager vs lazy STM</h1>
+
+		<p style="margin-bottom:1em">Two ways to implement transactions.</p>
 
 	    <table>
 	      <tr><td></td><th>Eager</th><th>Lazy</th></tr>
@@ -133,24 +131,19 @@
           <section>
            <h1>Handling the WRITE</h1>
 
-	   <p>Let's throw in a WRITE.</p>
 	    <div style="display:inline-block; width:10em">
-              <pre><code class="ruby">
-  atomic {
+              <pre><code class="ruby">  atomic {
     TM_WRITE n1.next
-  }
-	      </code></pre>
+  }	      </code></pre>
 	    </div>
 	    <div style="display:inline-block; width:10em">
-              <pre><code>
-  atomic {
+              <pre><code>  atomic {
     TM_READ head
     TM_READ n1.next
     TM_READ n2.next
     TM_READ n3.next
     process(n4)
-  }
-	      </code></pre>
+  }	      </code></pre>
 	    </div>
 	    <p style="margin-top:1em" class="reveal">If TM_WRITE runs first, TM_READer must stall or abort.</p>
 
@@ -158,7 +151,7 @@
 <!--------------------------------------------->
 
           <section>
-           <h1>Key idea: reservations and releases</h1>
+           <h1>Our key idea: reservations and releases</h1>
 
 	   <p style="padding-bottom:0.5em">We introduce the notions of <em>reservations</em> and <em>releases</em>.</p>
 	   
@@ -363,14 +356,15 @@ int foo() {
 		  
 	      <p style="margin-bottom:1em">Our Goal: minimize writer lock-out.</p>
 		  
-	      <p>Reserves and releases, together, allow temporary privatization of memory.</p>
-		  
-	      <p>Mechanism: commit-time validation and reader aborts.</p>
 		</section>
 
 <!--------------------------------------------->
 		<section>
           <h1>Privatization</h1>
+	      <p>Reserves and releases, together, allow temporary privatization of memory.</p>		  
+
+
+	      <p>Mechanism: commit-time validation and reader aborts.</p>
 
 		</section>
 
