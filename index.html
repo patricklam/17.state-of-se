@@ -148,7 +148,8 @@
 	    </div>
 		<div style="margin-top:1em">
 		<p>In eager systems:</p>
-	    <p style="padding-left:1em">If TM_WRITE runs first, TM_READer must stall or abort.</p>
+	    <p style="padding-left:1em">If TM_WRITE runs first, TM_READ must stall or abort.</p>
+	    <p style="padding-left:1em">If TM_READ runs first, TM_WRITE must stall or abort.</p>
 		</div>
 
           </section>
