@@ -420,7 +420,11 @@ TM_READ_RESERVE(B)</code></pre>
 
 	    <section>
               <h1>Write demotions</h1>
-
+	      <p>Consider:</p>
+		<pre><code># x already contains 5
+TM_WRITE(x, 5);</code></pre>
+	      <p>In this case, a <em>read reservation</em> suffices.</p>
+	      <p>Our reserve API thus enables more concurrent access to x.</p>
 	    </section>
 
 	  </section>
@@ -429,6 +433,95 @@ TM_READ_RESERVE(B)</code></pre>
           <section>
             <section>
               <h1>Implementing RR-TM: Bytelocks</h1>
+
+	      <p>Reservations and releases require extensions </p>
+	      <p style="margin-left:1em">to underlying lock implementation.</p>
+	      <p>We extended TLRW (implemented by RSTM).</p>
+	      <p style="margin-bottom:1em">Lock implementation: byte-locks.</p>
+
+	      <p style="font-size:smaller; margin-left:1em">(eager byte-locks, encounter-time locking upon access, free upon commit.)</p>
+
+	    </section>
+            <section>
+              <h1>Bytelock data structure</h1>
+
+	      <p>We redesigned bytelocks for our 64-hardware-thread system.</p>
+
+	      <img src="images/bytelocks-highlight.png" style="border:0">
+	      <p>(also, no unslotted threads)</p>
+	      <aside class="notes">two cache lines, but only 1 for the byte array containing locks.</aside>
+
+	    </section>
+
+            <section>
+              <h1 style="margin-bottom:.5em">Active Readers</h1>
+
+	      <img src="images/bytelocks-active-readers.png" style="border:0; height:400px">
+
+	      <p>Per-thread reserve &amp; release flags indicate <em>active readers</em>.</p>
+
+	      <p>Reserve: thread is active, may perform privatized access.</p>
+	      <p style="margin-bottom:1em">Release: thread no longer active, but not yet committed.</p>
+
+	      <p>Writer uses per-lock released field to indicate acquisition.</p>
+
+	    </section>
+
+            <section>
+              <h1>Acquiring a write reservation</h1>
+
+	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:400px">
+
+	      <ol>
+	      <li>Compare-and-swap to set owner field.</li>
+	      <li>Clear own reserve and release flags.</li>
+	      <li>Scan for any other active readers; stall until there are none.</li>
+	      <li>If any release flags set, set the per-lock released field.</li>
+	      </ol>
+
+	    </section>
+
+            <section>
+              <h1>Write reservation: guarantees</h1>
+
+	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:400px">
+
+	      <p>If you have a writer lock, <br><span style="margin-left:1em">no other transaction may read or write to that address.</span></p>
+	      <p>Hence, you may freely modify that address<br> without additional instrumentation.</p>
+	    </section>
+
+            <section>
+              <h1>Acquiring a read reservation</h1>
+	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:400px">
+
+	      <ol>
+	      <li>Atomically set own reserve flag.</li>
+	      <li>Inspect per-lock owner field.</li>
+	      <li>If lock held, and own release flag set, abort.</li>
+	      <li>If lock held, and own release flag unset, <br><span style="padding-left:1em">clear reserve flag and retry.</span></li>
+	      </ol>
+	    </section>
+
+            <section>
+              <h1>Read reservation: guarantees</h1>
+
+	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:400px">
+
+	      <p>Once you hold a reader lock,<br><span style="padding-left:1em"> contents are guaranteed to not change.</span></p>
+	      <p>You may freely read locked address<br> without additional instrumentation.</p>
+
+	    </section>
+
+            <section>
+              <h1>Performing a memory release</h1>
+	      <img src="images/bytelocks-release.png" style="border:0; height:400px">
+
+	      <p>You must hold active reader lock.</p>
+	      <p>Set your release flag, clear your reserve flag.</p>
+	    </section>
+
+            <section>
+              <h1>Committing a transaction</h1>
 	    </section>
 
 	  </section>
@@ -451,7 +544,7 @@ TM_READ_RESERVE(B)</code></pre>
 <!--------------------------------------------->
           <section>
             <section>
-              <h1>Related Work: "static" reservations</h1>
+              <h1>Related Work: &ldquo;static&rdquo; reservations</h1>
 
 	      <p>Initial work on STM [ST95] contained a notion of reservations:<br>
 		<span style="margin-left:1em">must declare all accessed addresses upon transaction entry.</span></p>
@@ -460,8 +553,8 @@ TM_READ_RESERVE(B)</code></pre>
 	    </section>
 
             <section>
-              <h1>Related Work: decomposing locks &amp; accesses</h1>
-	      <p>The notion of "lock first, access later" appears in [HP+96], [SA+06].</p>
+              <h1>Related Work: decomposing locks &amp; <br>accesses</h1>
+	      <p>Notion of &ldquo;lock first, access later&rdquo; appears in [HP+96], [SA+06].</p>
 	      <p>Our work focusses on eager STM &amp; uninstrumented accesses.</p>
 	      <p>Also, we make stronger privatization guarantees at reservations.</p>
 	    </section>
@@ -487,7 +580,7 @@ TM_READ_RESERVE(B)</code></pre>
 
 	      <p>Originally from lock-based concurrency control.</p>
 	      <p>Our contribution: </p>
-	      <p style="margin-left:1em"> explicit, domain-knowledge-free privatization through reservations and releases.</p>
+	      <blockquote>explicit, domain-knowledge-free privatization through reservations and releases.</blockquote>
 	    </section>
 
 	  </section>
