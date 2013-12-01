@@ -125,6 +125,19 @@
 	      <tr><td>TM_READ</td><td>read memory directly</td><td>read memory indirectly</td></tr>
 		  <tr><td></td><td></td><td>&nbsp;&nbsp; (using buffered values)</td></tr>
 	    </table>
+
+		<p style="margin-top:1em">Eager better matches C/C++ unmanaged memory model<br>
+<span style="padding-left:9em">and existing tooling.</span></p>
+		<p>Lazy STM is typically faster.</p>
+
+	      <aside class="notes">
+		Eager systems better for unmanaged languages: C/C++.
+		Separate memory ops from runtime ops.
+		Enable use of existing tooling, like debuggers.
+
+		Compiler instrumentation.
+	      </aside>
+
 	  </section>
 
 <!--------------------------------------------->
@@ -580,21 +593,66 @@ TM_WRITE(x, 5);</code></pre>
 
             <section>
               <h1>RR-TM speeds up small transactions: kmeans</h1>
-			  <img src="images/kmeans.png" style="border:0">
+			  <img src="images/kmeans.png">
 			  <img src="images/legend.png">
 
 			</section>
 
+			<section>
+			  <h1>kmeans analysis</h1>
+
+			  <p>3 transactions; 2 simply increment globals.</p>
+<pre><code>// main transaction: increment length, sum objects
+TM_BEGIN();
+long val = TM_READ(&*new_centers_len[index]);
+val += 1
+TM_WRITE(&*new_centers_len[index], val);
+for (j = 0; j < nfeatures; j++) {
+  val = TM_READ(&new_centers[index][j]);
+  val += feature[i][j];
+  TM_WRITE(&new_centers[index][j], val);
+}
+TM_END();
+</code></pre>
+			  <p>Using reservations: </p>
+			  <ul>
+				<li>move write reservation before first read</li>
+				<li>omit instrumentation inside loops</li>
+			  </ul>
+			  <p>Result: only need single write reservation per transaction.</p>
+
+			</section>
+
             <section>
-              <h1>RR-TM avoids livelocks: <br> yada, bayes, intruder, genome</h1>
-	    </section>
+              <h1 style="margin-bottom:0.5">RR-TM avoids livelocks: <br> genome, bayes, intruder, yada</h1>
+			  <img src="images/yada-bayes-intruder-genome.png" style="height:500px"><br>
+			  <img src="images/legend.png" style="height:30px">
+			</section>
 
             <section>
               <h1>Bad benchmark case study: vacation</h1>
-	    </section>
+			  <p>Large read set due to red-black tree accesses.</p>
+			  <p>Write demotions fulfilled 6% of writes with read reserves.</p>
+			  <img src="images/vacation-unopt.png">
+			  <img src="images/legend.png" style="height:30px">
+			</section>
+
+            <section>
+              <h1>Improving vacation: <br> RR-TM becomes competitive</h1>
+			  <p>vacation often unnecessarily re-read released addresses.</p>
+			  <p>We manually removed redundant work:</p>
+
+			  <img src="images/vacation-opt.png">
+			  <img src="images/legend.png" style="height:30px">
+
+			</section>
 
             <section>
               <h1>Already privatized: labyrinth, ssca2</h1>
+			  <p>labyrinth already uses privatization.</p>
+			  <p>ssca2 executes mostly outside of transactions.</p>
+			  <img src="images/labyrinth-ssca2.png">
+			  <img src="images/legend.png" style="height:30px">
 	    </section>
 
 
@@ -657,15 +715,8 @@ TM_WRITE(x, 5);</code></pre>
 		<li>Releases enable additional reader/writer concurrency.</li>
 	      </ul>
 
-	      <p>With RR-TM, eager STMs can compete better with lazy.</p>
+	      <p>With RR-TM, eager STMs competitive with lazy.</p>
 
-	      <aside class="notes">
-		Eager systems better for unmanaged languages: C/C++.
-		Separate memory ops from runtime ops.
-		Enable use of existing tooling, like debuggers.
-
-		Compiler instrumentation.
-	      </aside>
 
 	    </section>
 
