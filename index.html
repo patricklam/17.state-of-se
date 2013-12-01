@@ -367,32 +367,141 @@ int foo() {
 
 <!--------------------------------------------->
 		<section>
-          <h1>Privatization</h1>
-	      <p>Reserves and releases, together, allow temporary privatization of memory.</p>		  
+		  <h1>Privatization</h1>
+		  <p>Reserves and releases, together, allow temporary privatization of memory.</p>		  
+		  
+		  
+		  <p>Mechanism: commit-time validation and reader aborts.</p>
 
+		  <p>A transaction can write to an address only if there are no active read reservations on an address.</p>
 
-	      <p>Mechanism: commit-time validation and reader aborts.</p>
+		  <p>If a transaction tries to write to a released address, writer commit only succeeds after all released readers have completed.</p>
 
-		</section>
+		  <p>Writer ensures ordering by stalling until all readers commit or abort; or by aborting and rolling back</p>
 
-<!--------------------------------------------->
-		<section>
-          <h1>Optimizations That RR-TM Enables</h1>
-
-		  <ul> 
-			<li> write demotions </li>
-			<li> reserve dependencies </li>
-		  </ul>
-		</section>
-
-		<section>
-          <h1>RR-TM Optimizations</h1>
+		  <p>When a reader tries to re-read a previously read (and released) address, it must request a new reservation.</p>
+		  <p>If the address has been subsequently write reserved, reader must abort.</p>
 
 		</section>
 
 	  </section>
 <!--------------------------------------------->
 <!--------------------------------------------->
+          <section>
+            <section>
+              <h1>RR-TM Enables Optimization</h1>
+
+	      <p>Our novel API enable compilers to emit better code, using</p>
+	      <ul> 
+		<li> write demotions; and </li>
+		<li> reserve dependencies. </li>
+	      </ul>
+	    </section>
+
+	    <section>
+              <h1>Reserve Dependencies</h1>
+
+	      <p>Consider:</p>
+
+		<pre><code>TM_WRITE_RESERVE(A)
+# ...
+TM_READ_RESERVE(B)</code></pre>
+
+	      <p>Write reservation of A always precedes reservation of B.</p>
+	      <ul>
+	      <li>B's reservation succeeds iff A's write reserve succeeds.</li>
+	      <li>We can eliminate reservation of B.</li>
+	      </ul>
+	      <p style="margin-bottom:1em">Bonus: no need for undo log tracking.</p>
+	      <p>Reserve dependency optimization improved benchmark results.</p>
+
+	      
+	    </section>
+
+	    <section>
+              <h1>Write demotions</h1>
+
+	    </section>
+
+	  </section>
+<!--------------------------------------------->
+<!--------------------------------------------->
+          <section>
+            <section>
+              <h1>Implementing RR-TM: Bytelocks</h1>
+	    </section>
+
+	  </section>
+<!--------------------------------------------->
+<!--------------------------------------------->
+          <section>
+            <section>
+              <h1>Results</h1>
+
+	    </section>
+
+<!--------------------------------------------->
+            <section>
+              <h1>Experimental Setup</h1>
+
+	    </section>
+
+	  </section>
+<!--------------------------------------------->
+<!--------------------------------------------->
+          <section>
+            <section>
+              <h1>Related Work: "static" reservations</h1>
+
+	      <p>Initial work on STM [ST95] contained a notion of reservations:<br>
+		<span style="margin-left:1em">must declare all accessed addresses upon transaction entry.</span></p>
+	      <p>Such a notion was impractical for dynamic data structures.</p>
+	      <p>Our notion is dynamic and applies to an eager system.</p>
+	    </section>
+
+            <section>
+              <h1>Related Work: decomposing locks &amp; accesses</h1>
+	      <p>The notion of "lock first, access later" appears in [HP+96], [SA+06].</p>
+	      <p>Our work focusses on eager STM &amp; uninstrumented accesses.</p>
+	      <p>Also, we make stronger privatization guarantees at reservations.</p>
+	    </section>
+
+            <section>
+              <h1>Related Work: DSTM releases</h1>
+	      <p>Early releases first appeared in DSTM [HL+03].</p>
+	      <p>Idea: remove addresses from the read set of a transaction.</p>
+	      <p>These releases were manually inserted; domain knowledge ensured safety.</p>
+	      <p style="margin-left:1em">e.g.: release parent nodes in a tree traversal.</p>
+	      <p>No commit-time validation needed in DSTM.</p>
+	    </section>
+            <section>
+              <h1>Related Work: DSTM vs RR-TM releases</h1>
+	      <p>RR-TM releases could be mechanically applied,</p>
+	      <p style="margin-left:1em">in tandem with reservations.</p>
+	      <p>Applicable to any read; a transaction may re-reserve an address.</p>
+	      <p>Requires commit-time validation.</p>
+	    </section>
+
+            <section>
+              <h1>Related Work: privatization</h1>
+
+	      <p>Originally from lock-based concurrency control.</p>
+	      <p>Our contribution: </p>
+	      <p style="margin-left:1em"> explicit, domain-knowledge-free privatization through reservations and releases.</p>
+	    </section>
+
+	  </section>
+<!--------------------------------------------->
+<!--------------------------------------------->
+          <section>
+            <section>
+              <h1>Conclusions</h1>
+	    </section>
+
+	  </section>
+<!--------------------------------------------->
+<!--------------------------------------------->
+
 
 	  </div>
 	  </div>
