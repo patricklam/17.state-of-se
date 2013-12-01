@@ -361,26 +361,40 @@ int foo() {
 	      <p>Motivating observation:</p>
 		  <ul style="margin-bottom:1em"> <li> Large read sets often stall writers.</li> </ul>
 		  
-	      <p style="margin-bottom:1em">Our Goal: minimize writer lock-out.</p>
+	      <p style="margin-bottom:1em">Goal: minimize writer lock-out.</p>
+		  <p>Mechanism: reduce read set size with privatization<br><span style="margin-left:1em"> (reserves and releases).</span></p>
 		  
 		</section>
 
 <!--------------------------------------------->
 		<section>
-		  <h1>Privatization</h1>
-		  <p>Reserves and releases, together, allow temporary privatization of memory.</p>		  
+		  <h1>How Privatization Works</h1>
+
+		  <p>Non-shared memory need not be accessed transactionally.</p>
+
+		  <div style="float:left"><img src="images/LED_Traffic_Light.jpg" style="border: 0"></div>
+		  <div>
+		  <p style="margin-top:60px"><span style="padding-left:1em"><em>reserve</em>: prohibits concurrent access.</span></p>
+		  <p style="margin-top:160px"><span style="padding-left:1em"><em>release</em>: permits concurrent access again.</span></p>
+		  </div>
+		</section>
 		  
-		  
-		  <p>Mechanism: commit-time validation and reader aborts.</p>
+<!--------------------------------------------->
+		<section>
+		  <h1>Reservations, Releases, <br> and Privatization</h1>
 
-		  <p>A transaction can write to an address only if there are no active read reservations on an address.</p>
+		  <p>When trying to write:</p>
+		  <ul style="margin-bottom:1em">
+			<li>must be no active read reservations;</li>
+			<li>later, commit only succeeds after all released readers completed.</li>
+			<li>(or, abort and roll back.)</li>
+		  </ul>
 
-		  <p>If a transaction tries to write to a released address, writer commit only succeeds after all released readers have completed.</p>
-
-		  <p>Writer ensures ordering by stalling until all readers commit or abort; or by aborting and rolling back</p>
-
-		  <p>When a reader tries to re-read a previously read (and released) address, it must request a new reservation.</p>
-		  <p>If the address has been subsequently write reserved, reader must abort.</p>
+		  <p>When trying to re-read previously-released address:</p>
+		  <ul>
+		  <li>must request a new reservation;</li>
+		  <li>but, if the address has been subsequently write reserved, reader must abort.</li>
+		  </ul>
 
 		</section>
 
@@ -447,7 +461,7 @@ TM_WRITE(x, 5);</code></pre>
 
 	      <p>We redesigned bytelocks for our 64-hardware-thread system.</p>
 
-	      <img src="images/bytelocks-highlight.png" style="border:0">
+	      <img src="images/bytelocks-highlight.png" style="border:0; height:400px">
 	      <p>(also, no unslotted threads)</p>
 	      <aside class="notes">two cache lines, but only 1 for the byte array containing locks.</aside>
 
@@ -456,7 +470,7 @@ TM_WRITE(x, 5);</code></pre>
             <section>
               <h1 style="margin-bottom:.5em">Active Readers</h1>
 
-	      <img src="images/bytelocks-active-readers.png" style="border:0; height:400px">
+	      <img src="images/bytelocks-active-readers.png" style="border:0; height:300px">
 
 	      <p>Per-thread reserve &amp; release flags indicate <em>active readers</em>.</p>
 
@@ -470,7 +484,7 @@ TM_WRITE(x, 5);</code></pre>
             <section>
               <h1>Acquiring a write reservation</h1>
 
-	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:400px">
+	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:300px">
 
 	      <ol>
 	      <li>Compare-and-swap to set owner field.</li>
@@ -484,7 +498,7 @@ TM_WRITE(x, 5);</code></pre>
             <section>
               <h1>Write reservation: guarantees</h1>
 
-	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:400px">
+	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:300px">
 
 	      <p>If you have a writer lock, <br><span style="margin-left:1em">no other transaction may read or write to that address.</span></p>
 	      <p>Hence, you may freely modify that address<br> without additional instrumentation.</p>
@@ -492,7 +506,7 @@ TM_WRITE(x, 5);</code></pre>
 
             <section>
               <h1>Acquiring a read reservation</h1>
-	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:400px">
+	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:300px">
 
 	      <ol>
 	      <li>Atomically set own reserve flag.</li>
@@ -505,7 +519,7 @@ TM_WRITE(x, 5);</code></pre>
             <section>
               <h1>Read reservation: guarantees</h1>
 
-	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:400px">
+	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:300px">
 
 	      <p>Once you hold a reader lock,<br><span style="padding-left:1em"> contents are guaranteed to not change.</span></p>
 	      <p>You may freely read locked address<br> without additional instrumentation.</p>
@@ -514,7 +528,7 @@ TM_WRITE(x, 5);</code></pre>
 
             <section>
               <h1>Performing a memory release</h1>
-	      <img src="images/bytelocks-release.png" style="border:0; height:400px">
+	      <img src="images/bytelocks-release.png" style="border:0; height:300px">
 
 	      <p>You must hold active reader lock.</p>
 	      <p>Set your release flag, clear your reserve flag.</p>
