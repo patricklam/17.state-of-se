@@ -118,11 +118,12 @@
 
 		<p style="margin-bottom:1em">Two ways to implement transactions.</p>
 
-	    <table>
+	    <table style="font-size:smaller; padding-left:3em">
 	      <tr><td></td><th>Eager</th><th>Lazy</th></tr>
-	      <tr><td style="padding-right:1em">TM_WRITE</td><td style="padding-right:1em">write memory directly&nbsp;&amp;</td><td>buffer the write</td></tr>
-	      <tr><td></td><td><c style="padding-right:0.5em"></c>buffer old value</td></tr>
-	      <tr><td>TM_READ</td><td>read memory directly</td><td>read memory directly</td></tr>
+	      <tr><td style="padding-right:3em">TM_WRITE</td><td style="padding-right:3em">write memory directly&nbsp;&amp;</td><td>buffer the write</td></tr>
+	      <tr><td></td><td><c style="padding-right:1em"></c>remember old value</td></tr>
+	      <tr><td>TM_READ</td><td>read memory directly</td><td>read memory indirectly</td></tr>
+		  <tr><td></td><td></td><td>&nbsp;&nbsp; (using buffered values)</td></tr>
 	    </table>
 	  </section>
 
@@ -170,6 +171,12 @@
 	      
 	      <p style="padding-bottom:1em">Recall: a TM_WRITE locks out readers until it commits or aborts.<br>
 		Implication: subsequent accesses need not go through runtime.</p>
+
+		  <p style="padding-bottom:1em">Reservations perform the lockout without an actual access.</p>
+
+		  <figure style="padding-bottom:1em">
+		  <img src="images/Lockout-tagout_hasp.svg" alt="lockout/tagout"> <figcaption style="font-size:smaller">(wikimedia, RTCNCA)</figcaption>
+		  </figure>
 	      
 	      <p>Two types of reservations: write and read.</p>
 	    </section>
