@@ -67,6 +67,9 @@
           <section>
            <h1>Situation</h1>
            <p><div id="linked-list"></div></p>
+	      <aside class="notes">
+			Foreshadow concurrent access.
+		  </aside>
            <div>
              <div>
 	       <pre><code data-trim><!--  <span class="fragment">atomic </span>-->  {
@@ -126,9 +129,10 @@
 		  <tr><td></td><td></td><td>&nbsp;&nbsp; (using buffered values)</td></tr>
 	    </table>
 
-		<p style="margin-top:1em">Eager better matches C/C++ unmanaged memory model<br>
-<span style="padding-left:9em">and existing tooling.</span></p>
-		<p>Lazy STM is typically faster.</p>
+		<p style="margin-top:1em">Eager STM detects conflicts earlier;<br>
+<span style="padding-left:2em">better matches C/C++ unmanaged memory model<br>
+<span style="padding-left:10em">and existing tooling.</span></p>
+		<p>Lazy STM makes isolation easier and is typically faster.</p>
 
 	      <aside class="notes">
 		Eager systems better for unmanaged languages: C/C++.
@@ -161,8 +165,13 @@
 	    </div>
 		<div style="margin-top:1em">
 		<p>In eager systems:</p>
-	    <p style="padding-left:1em">If TM_WRITE runs first, TM_READ must stall or abort.</p>
-	    <p style="padding-left:1em">If TM_READ runs first, TM_WRITE must stall or abort.</p>
+	    <p style="padding-left:1em">If TM_WRITE runs first, TM_READ stalls or aborts.</p>
+	    <p style="padding-left:1em">If TM_READ runs first, TM_WRITE stalls or aborts.</p>
+<p>(Why?)</p>
+	      <aside class="notes">
+- Reader must abort as the value may continue to change or may be rolled back
+- Writer must abort as it cannot change while a reader is expecting the value to not change.
+		  </aside>
 		</div>
 
           </section>
@@ -175,13 +184,13 @@
 		  <ul style="margin-bottom:1em"> <li> Large read sets often stall writers.</li> </ul>
 		  
 	      <p>Our goal: minimize writer lock-out.</p>
-		  <p>How: reduce read set size through privatization.</span></p>
+		  <p>How: reduce read set size through temporary privatization.</span></p>
 		  
 		</section>
 
 <!--------------------------------------------->
 		<section>
-		  <h1>How Privatization Works</h1>
+		  <h1>How Temporary Privatization Works</h1>
 
 		  <p>Non-shared memory need not be accessed transactionally.</p>
 
@@ -270,10 +279,17 @@
 
 	      <p>Enable unmediated access to memory.</p>
 	      <ul style="margin-bottom:1em">
-	      <li>Eliminate overhead due to TM_READ, TM_WRITE calls.</li>
-	      <li>Especially useful for repeated re-reads in a loop.</li>
+			<li>Current API too flexible: <br>
+			  <span style="padding-left:4em">transactions must use TM_READ, TM_WRITE calls.</span></li>
+			<li>Reservations restrict program behaviour, <br>
+			  <span style="padding-left:4em">empowering the compiler/runtime.</span></li>
+			<li>Direct accesses useful for repeated re-reads in a loop.</li>
 	      </ul>
 	      <p>Path-sensitive compiler analyses can use reservations to optimize code.</p>
+	      <aside class="notes">
+Because the current API is too flexible. It doesn’t place any guarantees that a writer may come and modify the value with an active reader. We restrict and thus empower the API.
+		  </aside>
+
 	    </section>
 
 	  </section>
@@ -289,9 +305,14 @@
 	      
 	      <p>A <em>release</em> signals that a transaction is done with an address.</p>
 	      <ul style="margin-bottom:1em">
-	      <li>Only applicable to read reservations.</li>
+	      <li>Only applicable to read reservations<br>
+<span style="padding-left:4em">(writes too expensive.)</span></li>
 	      <li>Allows other threads to write the address.</li>
 	      </ul>
+		  <aside class="notes">
+Why only release read reserves? Because handling rollback after a release incurs too much overhead. You have to abort readers and writers that operated on a speculative write.
+		  </aside>
+
 	    </section>
 
 <!--------------------------------------------->
@@ -331,7 +352,7 @@
   }</code></pre>
 
 	      <p>If another transaction reserved the address meanwhile, <br> 
-             <span style="padding-right:1em">&nbsp;</span> re-reader must abort.</p>
+             <span style="padding-right:1em">&nbsp;</span> re-reader must abort &mdash; value may have changed.</p>
 	    </section>
 
 <!--------------------------------------------->
@@ -388,6 +409,7 @@ int foo() {
 		<section>
 		  <h1>Ensuring serializability</h1>
 
+		  <p style="margin-bottom:1em">Want to ensure sane ordering.</p>
 		  <p>When trying to write:</p>
 		  <ul style="margin-bottom:1em">
 			<li>must be no active read reservations;</li>
@@ -401,6 +423,11 @@ int foo() {
 		  <li>but, if the address has been subsequently write reserved, reader must abort.</li>
 		  </ul>
 
+<aside class="notes">
+- When trying to write: we want to ensure that released readers appear to have been  executed before writer
+- When re-reading: Want to make sure that the reader can be ordered with the writer. i.e. it either is before or after a writer.
+</aside>
+
 		</section>
 
 	  </section>
@@ -412,8 +439,8 @@ int foo() {
 
 	      <p>Our novel API enable compilers to emit better code, using</p>
 	      <ul> 
-		<li> write demotions; and </li>
-		<li> reserve dependencies. </li>
+		<li> reserve dependencies; and </li>
+		<li> write demotions. </li>
 	      </ul>
 	    </section>
 
@@ -429,7 +456,8 @@ TM_READ_RESERVE(B)</code></pre>
 	      <p>Write reservation of A always precedes reservation of B.</p>
 	      <ul>
 	      <li>B's reservation succeeds iff A's write reserve succeeds.</li>
-	      <li>We can eliminate reservation of B.</li>
+		  <li>If B is the last reservation, then<br>
+	      <span style="margin-left:4em">we can eliminate reservation of B.</span></li>
 	      </ul>
 	      <p style="margin-bottom:1em">Bonus: no need for undo log tracking.</p>
 	      <p>Reserve dependency optimization improved benchmark results.</p>
@@ -438,12 +466,15 @@ TM_READ_RESERVE(B)</code></pre>
 	    </section>
 
 	    <section>
-              <h1>Write demotions</h1>
+              <h1>Write Demotions</h1>
 	      <p>Consider:</p>
 		<pre><code># x already contains 5
 TM_WRITE(x, 5);</code></pre>
 	      <p>In this case, a <em>read reservation</em> suffices.</p>
 	      <p>Our reserve API thus enables greater concurrency for x.</p>
+<aside class="notes">
+Note that we are doing a TM_WRITE without a write reservation. We are augmenting the standard API with reservations. This translates to a writer reservation followed by a direct access write. Note that you typically only want to do an explicit write reservation if you are going to do multiple explicit writes.
+</aside>
 	    </section>
 
 	  </section>
@@ -468,7 +499,7 @@ TM_WRITE(x, 5);</code></pre>
 
 	      <img src="images/bytelocks-highlight.png" style="border:0; height:400px">
 	      <p>(also, no unslotted threads)</p>
-	      <aside class="notes">two cache lines, but only 1 for the byte array containing locks.</aside>
+	      <aside class="notes">RSTM doesn't have unslotted threads either. two cache lines, but only 1 for the byte array containing locks.</aside>
 
 	    </section>
 
@@ -479,11 +510,8 @@ TM_WRITE(x, 5);</code></pre>
 
 	      <p>Per-thread reserve &amp; release flags indicate <em>active readers</em>.</p>
 
-	      <p>Reserve: thread is active, may perform privatized access.</p>
+	      <p>Reserve: thread is active, may perform privatized READ access.</p>
 	      <p style="margin-bottom:1em">Release: thread no longer active, but not yet committed.</p>
-
-	      <p>Writer uses per-lock released field to indicate acquisition.</p>
-
 	    </section>
 
             <section>
@@ -492,7 +520,7 @@ TM_WRITE(x, 5);</code></pre>
 	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:300px">
 
 	      <ol>
-	      <li>Compare-and-swap to set owner field.</li>
+	      <li>Compare-and-swap to set owner field (if not already owned).</li>
 	      <li>Clear own reserve and release flags.</li>
 	      <li>Scan for any other active readers; stall until there are none.</li>
 	      <li>If any release flags set, set the per-lock released field.</li>
@@ -507,6 +535,9 @@ TM_WRITE(x, 5);</code></pre>
 
 	      <p>If you have a writer lock, <br><span style="margin-left:1em">no other transaction may read or write to that address.</span></p>
 	      <p>Hence, you may freely modify that address<br> without additional instrumentation.</p>
+<aside class="notes">
+- Guarantee that no other transaction may read or writer is ensured by the compiler when instrumenting code. Manual/poor instrumentation could break this conditions. (May not need to state this, must just keep it in mind).
+</aside>
 	    </section>
 
             <section>
@@ -516,8 +547,8 @@ TM_WRITE(x, 5);</code></pre>
 	      <ol>
 	      <li>Atomically set own reserve flag.</li>
 	      <li>Inspect per-lock owner field.</li>
-	      <li>If lock held, and own release flag set, abort.</li>
-	      <li>If lock held, and own release flag unset, <br><span style="padding-left:1em">clear reserve flag and retry.</span></li>
+	      <li>If lock held elsewhere, and own release flag set, abort.</li>
+	      <li>If lock held elsewhere, and own release flag unset, <br><span style="padding-left:1em">clear reserve flag and retry.</span></li>
 	      </ol>
 	    </section>
 
@@ -529,7 +560,7 @@ TM_WRITE(x, 5);</code></pre>
 	      <p>Once you hold a reader lock,<br><span style="padding-left:1em"> contents are guaranteed to not change.</span></p>
 	      <p>You may freely read locked address<br> without additional instrumentation.</p>
 
-	    </section>
+			</section>
 
             <section>
               <h1>Performing a memory release</h1>
@@ -537,7 +568,7 @@ TM_WRITE(x, 5);</code></pre>
 
 	      <p>You must hold active reader lock.</p>
 	      <p>Set your release flag, clear your reserve flag.</p>
-	    </section>
+			</section>
 
             <section>
               <h1>Committing a transaction</h1>
@@ -549,7 +580,14 @@ TM_WRITE(x, 5);</code></pre>
 		<li>if released field set, perform commit-time validation.</li>
 		<li>free read locks, clear owner field on write locks.</li>
 	      </ol>
-	    </section>
+			</section>
+
+            <section>
+              <h1>Why commit-time validation?</h1>
+
+			  <p>Recall: we want to have a ordering between transactions.</p>
+			  <p>Releases impose an ordering: writers after readers.</p>
+			</section>
 
 	  </section>
 <!--------------------------------------------->
@@ -661,6 +699,12 @@ TM_END();
 <!--------------------------------------------->
           <section>
             <section>
+              <h1>Related Work</h1>
+
+			  <p>Our main novelty: reservations plus releases for eager STM.</p>
+			</section>
+
+            <section>
               <h1>Related Work: &ldquo;static&rdquo; reservations</h1>
 
 	      <p>Initial work on STM [ST95] contained a notion of reservations:<br>
@@ -673,7 +717,7 @@ TM_END();
               <h1>Related Work: decomposing locks &amp; <br>accesses</h1>
 	      <p>Notion of &ldquo;lock first, access later&rdquo; appears in [HP+96], [SA+06].</p>
 	      <p>Our work focusses on eager STM &amp; uninstrumented accesses.</p>
-	      <p>Also, we make stronger privatization guarantees at reservations.</p>
+	      <p>Also, we make stronger privatization guarantees by specialization the API.</p>
 	    </section>
 
             <section>
@@ -682,14 +726,10 @@ TM_END();
 	      <p>Idea: remove addresses from the read set of a transaction.</p>
 	      <p>These releases were manually inserted; domain knowledge ensured safety.</p>
 	      <p style="margin-left:1em">e.g.: release parent nodes in a tree traversal.</p>
-	      <p>No commit-time validation needed in DSTM.</p>
-	    </section>
-            <section>
-              <h1>Related Work: DSTM vs RR-TM releases</h1>
-	      <p>RR-TM releases could be mechanically applied,</p>
+	      <p style="margin-top:1em">RR-TM releases could be mechanically applied,</p>
 	      <p style="margin-left:1em">in tandem with reservations.</p>
-	      <p>Applicable to any read; a transaction may re-reserve an address.</p>
-	      <p>Requires commit-time validation.</p>
+	      <p>Applicable to any read &mdash; transactions may re-reserve an address.</p>
+	      <p>DSTM: no commit-time validation;<br> RR-TM: requires commit-time validation.</p>
 	    </section>
 
             <section>
