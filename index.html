@@ -231,7 +231,7 @@
 		</code></pre>
 	      </div>
 	      <p style="margin-bottom:1em">Transactions may concurrently read reserve an address.</p>
-	      <p>Writers must stall or abort.</p>
+	      <p>Concurrent writers must stall or abort.</p>
 
 	    </section>
 
@@ -437,7 +437,7 @@ TM_WRITE(x, 5);</code></pre>
 	      <p>Reservations and releases require extensions </p>
 	      <p style="margin-left:1em">to underlying lock implementation.</p>
 	      <p>We extended TLRW (implemented by RSTM).</p>
-	      <p style="margin-bottom:1em">Lock implementation: byte-locks.</p>
+	      <p style="margin-bottom:1em">Highly-performant read/write lock implementation: byte-locks.</p>
 
 	      <p style="font-size:smaller; margin-left:1em">(eager byte-locks, encounter-time locking upon access, free upon commit.)</p>
 
@@ -522,6 +522,14 @@ TM_WRITE(x, 5);</code></pre>
 
             <section>
               <h1>Committing a transaction</h1>
+	      <p style="margin-bottom:1em">Must free read and write locks.</p>
+	      <p style="margin-bottom:1em">Readers: clear reserve and release flags for all held locks.</p>
+	      <p>Writers:</p>
+	      <ol>
+		<li>scan write locks, check per-lock released fields.</li>
+		<li>if released field set, perform commit-time validation.</li>
+		<li>free read locks, clear owner field on write locks.</li>
+	      </ol>
 	    </section>
 
 	  </section>
@@ -529,7 +537,7 @@ TM_WRITE(x, 5);</code></pre>
 <!--------------------------------------------->
           <section>
             <section>
-              <h1>Results</h1>
+              <h1>Evaluation</h1>
 
 	    </section>
 
@@ -537,7 +545,49 @@ TM_WRITE(x, 5);</code></pre>
             <section>
               <h1>Experimental Setup</h1>
 
+	      <p>STAMP benchmark suite.</p>
+	      <p>64 hardware threads, 4 NUMA nodes.</p>
+	      <p style="margin-bottom:1em">Conservative evaluation: no thread scheduler (hard affinitize.)</p>
+	      <p>Our comparison:</p>
+		  <ul>
+		    <li>RR-TM &mdash; Reservations &amp; Releases</li>
+		    <li>ByteEager &mdash; Read &amp; Write with eager versioning</li>
+		    <li>ByteLazy &mdash; Read &amp; Write with lazy versioning</li>
+		  </ul>
+
 	    </section>
+
+<!--------------------------------------------->
+            <section>
+              <h1>RR-TM achieves 2.73x mean speedup</h1>
+
+	      <img style="border:0" src="images/max-speedups.png">
+
+	      <p>Maximal speedup across thread counts.</p>
+	      <ul>
+		<li>RR-TM: geometric mean speedup 2.73x</li>
+		<li>ByteLazy: geometric mean speedup 2.43x</li>
+		<li>ByteEager: geometric mean speedup 1.93x</li>
+	      </ul>
+
+	    </section>
+
+            <section>
+              <h1>RR-TM speeds up small transactions: kmeans</h1>
+	    </section>
+
+            <section>
+              <h1>RR-TM avoids livelocks: <br> yada, bayes, intruder, genome</h1>
+	    </section>
+
+            <section>
+              <h1>Bad benchmark case study: vacation</h1>
+	    </section>
+
+            <section>
+              <h1>Already privatized: labyrinth, ssca2</h1>
+	    </section>
+
 
 	  </section>
 <!--------------------------------------------->
@@ -589,6 +639,25 @@ TM_WRITE(x, 5);</code></pre>
           <section>
             <section>
               <h1>Conclusions</h1>
+
+	      <p style="margin-bottom:1em">RR-TM improves performance and scalability of eager STMs.</p>
+	      <p>Key idea: temporary privatization &mdash; combine reserves, releases.</p>
+
+	      <ul style="margin-bottom:1em">
+		<li>Reservations allow instrumentation-free shared memory.</li>
+		<li>Releases enable additional reader/writer concurrency.</li>
+	      </ul>
+
+	      <p>With RR-TM, eager STMs can compete better with lazy.</p>
+
+	      <aside class="notes">
+		Eager systems better for unmanaged languages: C/C++.
+		Separate memory ops from runtime ops.
+		Enable use of existing tooling, like debuggers.
+
+		Compiler instrumentation.
+	      </aside>
+
 	    </section>
 
 	  </section>
