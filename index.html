@@ -7,16 +7,14 @@
         <title>RR-TM</title>
         <link rel="stylesheet" href="css/reveal.min.css">
 		<link rel="stylesheet" href="css/theme/simple.css" id="theme">    
+		<link rel="stylesheet" href="styles/default.css">
+
 		<!--Add support for earlier versions of Internet Explorer -->
 		<!--[if lt IE 9]>
 			<script src="lib/js/html5shiv.js"></script>
 	    <![endif]-->
 
-		<link rel="stylesheet" href="styles/default.css">
-		<script src="highlight.pack.js"></script>
-		<script>hljs.initHighlightingOnLoad();</script>
-
-        <script src="raphael-min.js"></script>
+        <script src="js/raphael-min.js"></script>
         <style media="screen">
             body {
                 margin: 0;
@@ -33,7 +31,6 @@
             }
 	    .reveal p {
 	        text-align:left;
-			font-size: 36px;
 	    }
             #canvas {
                 height: 480px;
@@ -52,6 +49,7 @@
                 font-size: 2em;
             }
         </style>
+
     </head>
     <body>
         <div class="reveal">
@@ -73,20 +71,20 @@
 		  </aside>
            <div>
              <div>
-	       <pre><code data-trim><!--  <span class="fragment">atomic </span>-->  {
+	       <pre><code data-trim>{
     process(n4);
-  }</code></pre>
+}</code></pre>
 	     </div>
              <div class="fragment">
                <p>implies the following operations:</p>
 	       <div>
-		 <pre><code data-trim>  <!--atomic -->{
+		 <pre><code>{
     READ head
     READ n1.next
     READ n2.next
     READ n3.next
     process(n4)
-  }</code></pre>
+}</code></pre>
 	       </div>
 	     </div>
 	   </div>
@@ -104,13 +102,13 @@
   }	      </code></pre>
 	    </div>
 	    <div style="display:inline-block; width:10em">
-              <pre><code><span class="fragment" data-fragment-index="1"> atomic { </span>
+              <pre><code> atomic { </span>
     TM_READ head
     TM_READ n1.next
     TM_READ n2.next
     TM_READ n3.next
     process(n4)
-<span class="fragment" data-fragment-index="1">   } </span>	      </code></pre>
+   } </span>	      </code></pre>
 	    </div>
 
 <p class="fragment" data-fragment-index="2">Transactions guarantee <em>isolation</em> and <em>serializability</em>.</p>
@@ -663,8 +661,8 @@ TM_END();
 			</section>
 
             <section>
-              <h1 style="margin-bottom:0.5">RR-TM avoids livelocks: <br> genome, bayes, intruder, yada</h1>
-			  <img src="images/yada-bayes-intruder-genome.png" style="height:500px"><br>
+              <h1 style="margin-bottom:0.5em">RR-TM avoids livelocks: <br> genome, bayes, intruder, yada</h1>
+			  <img src="images/yada-bayes-intruder-genome.png" style="height:450px"><br>
 			  <img src="images/legend.png" style="height:30px">
 			</section>
 
@@ -892,8 +890,17 @@ Reveal.initialize({
         transitionSpeed: 'default', // default/fast/slow
 
         // Transition style for full page backgrounds
-        backgroundTransition: 'default' // default/linear/none
+        backgroundTransition: 'default', // default/linear/none
 
+        // Optional libraries used to extend on reveal.js
+		dependencies: [
+		        { src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+		        { src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+		        { src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+		        { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+		        { src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+		        { src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+        ]
 });
         </script>
  
