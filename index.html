@@ -4,7 +4,7 @@
     <head>
         <meta charset="utf-8">
 
-        <title>RR-TM</title>
+        <title>State of the Software Engineering Program, 2017</title>
         <link rel="stylesheet" href="css/reveal.min.css">
 		<link rel="stylesheet" href="css/theme/simple.css" id="theme">    
 		<link rel="stylesheet" href="styles/default.css">
@@ -45,8 +45,24 @@
                 padding: 0;
                 width: 90%;
             }
-            #run {
-                font-size: 2em;
+            table { 
+                border-collapse:collapse;
+                width: 100%;
+            }
+            table td.marks {
+              border:0.5px dashed #eee;
+              padding-right: 1em;
+              text-align: right;
+            }
+            table td.attrition {
+              border:0.5px dashed #eee;
+              border-right:10em;
+              text-align: right;
+            }
+            table td.degrees {
+              border:0.5px dashed #eee;
+              padding-right: 0;
+              text-align: right;
             }
         </style>
 
@@ -54,715 +70,164 @@
     <body>
         <div class="reveal">
           <div class="slides">
-<!--------------------------------------------->
 	  <section>
-           <h1 style="font-size:58px">RR-TM: Improving Concurrency for<br> Eager Software Transactional Memory</h1>
-           <p style="text-align:center">Gaurav Jain and Patrick Lam</p>
-           <p style="text-align:center">University of Waterloo</p>
-		   <p style="text-align:center">December 2, 2013</p>
-	  </section>
-<!--------------------------------------------->
-
-          <section>
-           <h1>Situation</h1>
-           <p><div id="linked-list"></div></p>
-	      <aside class="notes">
-			Foreshadow concurrent access.
-		  </aside>
-           <div>
-             <div>
-	       <pre><code data-trim>{
-    process(n4);
-}</code></pre>
-	     </div>
-             <div class="fragment">
-               <p>implies the following operations:</p>
-	       <div>
-		 <pre><code>{
-    READ head
-    READ n1.next
-    READ n2.next
-    READ n3.next
-    process(n4)
-}</code></pre>
-	       </div>
-	     </div>
-	   </div>
-          </section>
-<!--------------------------------------------->
-
-          <section>
-           <h1>Contention</h1>
-
-	   <p>Let's add atomic blocks...<br>
-            <span class="fragment" style="padding-left:2em" data-fragment-index="2">... and throw in a TM_WRITE.</span></p>
-	    <div style="display:inline-block; width:10em" class="fragment" data-fragment-index="2">
-              <pre><code class="ruby">  atomic {
-    TM_WRITE n1.next
-  }	      </code></pre>
-	    </div>
-	    <div style="display:inline-block; width:10em">
-              <pre><code> atomic { </span>
-    TM_READ head
-    TM_READ n1.next
-    TM_READ n2.next
-    TM_READ n3.next
-    process(n4)
-   } </span>	      </code></pre>
-	    </div>
-
-<p class="fragment" data-fragment-index="2">Transactions guarantee <em>isolation</em> and <em>serializability</em>.</p>
-          </section>
-<!--------------------------------------------->
-
-          <section>
-	    <h1>Eager vs lazy STM</h1>
-
-		<p style="margin-bottom:1em">Two ways to implement software transactions.</p>
-
-	    <table style="font-size:smaller; padding-left:3em">
-	      <tr><td></td><th>Eager</th><th>Lazy</th></tr>
-	      <tr><td style="padding-right:3em">TM_WRITE</td><td style="padding-right:3em">write memory directly&nbsp;&amp;</td><td>buffer the write</td></tr>
-	      <tr><td></td><td><c style="padding-right:1em"></c>remember old value</td></tr>
-	      <tr><td>TM_READ</td><td>read memory directly</td><td>read memory indirectly</td></tr>
-		  <tr><td></td><td></td><td>&nbsp;&nbsp; (using buffered values)</td></tr>
-	    </table>
-
-		<p style="margin-top:1em">Eager STM detects conflicts earlier;<br>
-<span style="padding-left:2em">better matches C/C++ unmanaged memory model<br>
-<span style="padding-left:10em">and existing tooling.</span></p>
-		<p>Lazy STM makes isolation easier and is typically faster.</p>
-
-	      <aside class="notes">
-		Eager systems better for unmanaged languages: C/C++.
-		Separate memory ops from runtime ops.
-		Enable use of existing tooling, like debuggers.
-
-		Compiler instrumentation.
-	      </aside>
-
+           <h1 style="font-size:58px; line-height:110%">State of the<br /> Software Engineering Program, <br />Spring 2017</h1>
+           <p style="text-align:center">Patrick Lam</p>
+           <p style="text-align:center">Director, Software Engineering Program</p>
+		   <p style="text-align:center">April 4, 2017</p>
 	  </section>
 
-<!--------------------------------------------->
+      <section style="background-image:url(images/convocation.JPG); background-size:100%; background-repeat:no-repeat; background-position: 0 0.5em; color: white; min-height:768px">
+        <div style="padding-left: 10px">
+           <h1 style="color: white">History</h1>
+           <p>First graduating class: 2006</p>
+           <p># of BSEs granted to 2016: 865</p>
+        </div>
+      </section>
 
-          <section>
-           <h1>Handling the WRITE</h1>
-
-	    <div style="display:inline-block; width:10em">
-              <pre><code class="ruby">  atomic {
-    TM_WRITE n1.next
-  }	      </code></pre>
-	    </div>
-	    <div style="display:inline-block; width:10em">
-              <pre><code>  atomic {
-    TM_READ head
-    TM_READ n1.next
-    TM_READ n2.next
-    TM_READ n3.next
-    process(n4)
-  }	      </code></pre>
-	    </div>
-		<div style="margin-top:1em">
-		<p>In eager systems:</p>
-	    <p style="padding-left:1em">If TM_WRITE runs first, TM_READ stalls or aborts.</p>
-	    <p style="padding-left:1em">If TM_READ runs first, TM_WRITE stalls or aborts.</p>
-<p>(Why?)</p>
-	      <aside class="notes">
-- Reader must abort as the value may continue to change or may be rolled back
-- Writer must abort as it cannot change while a reader is expecting the value to not change.
-		  </aside>
-		</div>
-
-          </section>
-<!--------------------------------------------->
-
-		<section>
-          <h1>Implication of contention</h1>
-
-	      <p>Observe:</p>
-		  <ul style="margin-bottom:1em"> <li> Large read sets often stall writers.</li> </ul>
-		  
-	      <p>Our goal: minimize writer lock-out.</p>
-		  <p>How: reduce read set size through temporary privatization.</span></p>
-		  
-		</section>
-
-<!--------------------------------------------->
-		<section>
-		  <h1>How Temporary Privatization Works</h1>
-
-		  <p>Non-shared memory need not be accessed transactionally.</p>
-
-		  <div style="float:left"><img src="images/LED_Traffic_Light.jpg" style="border: 0"></div>
-		  <div>
-		  <p style="margin-top:60px"><span style="padding-left:1em"><em>reserve</em>: prohibits concurrent access.</span></p>
-		  <p style="margin-top:160px"><span style="padding-left:1em"><em>release</em>: permits concurrent access again.</span></p>
-		  </div>
-		</section>
-		  
-<!--------------------------------------------->
-
-          <section>
-	    <section>
-              <h1>Memory reservations</h1>
-	      
-	      <p style="padding-bottom:1em">Recall: a TM_WRITE locks out readers until it commits or aborts.<br>
-		Implication: subsequent accesses need not go through runtime.</p>
-
-		  <p style="padding-bottom:1em">Reservations perform the lockout without an actual access.</p>
-
-		  <figure style="padding-bottom:1em">
-		  <img src="images/Lockout-tagout_hasp.svg" alt="lockout/tagout" style="border:0"> <figcaption style="font-size:smaller">(wikimedia commons, RTCNCA)</figcaption>
-		  </figure>
-	      
-	      <p>Two types of reservations: write and read.</p>
-	    </section>
-
-<!--------------------------------------------->
-
-            <section>
-              <h1>Write reservations</h1>
-
-
-	      <p>A <em>write reservation</em> locks out readers, without an actual write.</p>
-	      <ul>
-		<li>Can be done ahead of time, before the access.</li>
-	      </ul>
-
-	      <div style="display:inline-block; width:11em">
-		<pre><code class="ruby">
-  atomic {
-    TM_WRITE_RESERVE n1.next
-    n1.next = null
-  }
-		</code></pre>
-	      </div>
-	      <div style="display:inline-block; width:13.5em">
-		<pre><code class="ruby C">
-  atomic {
-    TM_READ head
-    TM_READ n1.next  # stall or abort
-  }
-		</code></pre>
-	      </div>
-
-	      <p>After a write reserve, a thread may directly write to memory.</p>
-	      
-            </section>
-
-<!--------------------------------------------->
-            <section>
-              <h1>Read reservations</h1>
-
-	      <p>Similarly, a <em>read reservation</em> prevents concurrent writes,<br>
-	         enabling direct reads.</p>
-
-	      <div style="display:inline-block; width:13.5em">
-		<pre><code class="ruby C">
-  atomic {
-    TM_READ_RESERVE head
-    x = head
-    ...
-    y = head
-  }
-		</code></pre>
-	      </div>
-	      <p style="margin-bottom:1em">Transactions may concurrently read reserve an address.</p>
-	      <p>Concurrent writers must stall or abort.</p>
-
-	    </section>
-
-<!--------------------------------------------->
-	    <section>
-	      <h1>Implications of reservations</h1>
-
-	      <p>Enable unmediated access to memory.</p>
-	      <ul style="margin-bottom:1em">
-			<li>Current API too flexible: <br>
-			  <span style="padding-left:4em">transactions must use TM_READ, TM_WRITE calls.</span></li>
-			<li>Reservations restrict program behaviour, <br>
-			  <span style="padding-left:4em">empowering the compiler/runtime.</span></li>
-			<li>Direct accesses useful for repeated re-reads in a loop.</li>
-	      </ul>
-	      <p>Path-sensitive compiler analyses can use reservations to optimize code.</p>
-	      <aside class="notes">
-Because the current API is too flexible. It doesn’t place any guarantees that a writer may come and modify the value with an active reader. We restrict and thus empower the API.
-		  </aside>
-
-	    </section>
-
-	  </section>
-
-<!--------------------------------------------->
-<!--------------------------------------------->
-
-          <section>
-	    <section>
-              <h1>Memory releases</h1>
-	      
-	      <p style="padding-bottom:1em">As seen until now, reservations persist until commit or abort.</p>
-	      
-	      <p>A <em>release</em> signals that a transaction is done with an address.</p>
-	      <ul style="margin-bottom:1em">
-	      <li>Only applicable to read reservations<br>
-<span style="padding-left:4em">(writes too expensive.)</span></li>
-	      <li>Allows other threads to write the address.</li>
-	      </ul>
-		  <aside class="notes">
-Why only release read reserves? Because handling rollback after a release incurs too much overhead. You have to abort readers and writers that operated on a speculative write.
-		  </aside>
-
-	    </section>
-
-<!--------------------------------------------->
-	    <section>
-              <h1>Memory release example</h1>
-
-		<pre><code class="ruby C">
-  atomic {
-    {
-      Node n = TM_READ head->next
-      TM_READ_RESERVE n
-      # access n directly and repeatedly
-      TM_RELEASE n
-
-      # n goes out of scope
-    }
-    # more processing, but no more accesses to n
-  }
-		</code></pre>
-
-	    </section>
-<!--------------------------------------------->
-	    <section>
-              <h1>Regaining access after a release</h1>
-
-	      <p style="margin-bottom:1em">A transaction may regain access to an address after releasing it.</p>
-
-		<pre><code class="ruby C">  atomic {
-    Node n = TM_READ head->next
-    TM_READ_RESERVE n
-    # access n directly and repeatedly
-    TM_RELEASE n
-
-    # ...
-
-    TM_READ_RESERVE n
-  }</code></pre>
-
-	      <p>If another transaction reserved the address meanwhile, <br> 
-             <span style="padding-right:1em">&nbsp;</span> re-reader must abort &mdash; value may have changed.</p>
-	    </section>
-
-<!--------------------------------------------->
-
-	    <section>
-              <h1>Reservations and releases <br> reduce instrumentation</h1>
-
-	      <div style="display:inline-block; width:13em">
-		<pre><code class="C">int a, b, c, d;
-
-int bar(int& x) {
- return TM_READ(&x)+1;
-}
-
-int foo() {
- TM_WRITE(&a, 2);
- TM_WRITE(&b, 2);
- if (TM_READ(&d) >= 0) {
-  TM_WRITE(&b, TM_READ(&c) + 
-                 TM_READ(&d));
- } else {
-  TM_WRITE(&a, bar(b));
- }
- return TM_READ(&a) + TM_READ(&b);
-}		</code></pre>
-	      </div>
-	      <div style="display:inline-block; width:13.2em">
-		<pre><code class="C">int a, b, c, d;
-
-int bar(int& x) { return x+1; }
-
-int foo() {
- TM_WRITE_RESERVE(&a);
- TM_WRITE_RESERVE(&b);
- bool release = TM_READ_RESERVE(&d);
- if (d > 0) {
-  a = 2;
-  b = TM_READ_RELEASE(&c) + d;
- } else {
-  b = 2; a = bar(b);
- }
- if (release)
-  TM_RELEASE(&d);
- return a + b; }</code></pre>
-	      </div>
-
-	    </section>
-
-	  </section>
-<!--------------------------------------------->
-<!--------------------------------------------->
       <section>
-<!--------------------------------------------->
-		<section>
-		  <h1>Ensuring serializability</h1>
-
-		  <p style="margin-bottom:1em">Want to ensure sane ordering.</p>
-		  <p>When trying to write:</p>
-		  <ul style="margin-bottom:1em">
-			<li>must be no active read reservations;</li>
-			<li>later, commit only succeeds after all released readers completed.</li>
-			<li>(or, abort and roll back.)</li>
-		  </ul>
-
-		  <p>When trying to re-read previously-released address:</p>
-		  <ul>
-		  <li>must request a new reservation;</li>
-		  <li>but, if the address has been subsequently write reserved, reader must abort.</li>
-		  </ul>
-
-<aside class="notes">
-- When trying to write: we want to ensure that released readers appear to have been  executed before writer
-- When re-reading: Want to make sure that the reader can be ordered with the writer. i.e. it either is before or after a writer.
-</aside>
-
-		</section>
-
-	  </section>
-<!--------------------------------------------->
-<!--------------------------------------------->
-          <section>
-            <section>
-              <h1>RR-TM Enables Optimization</h1>
-
-	      <p>Our novel API enable compilers to emit better code, using</p>
-	      <ul> 
-		<li> reserve dependencies; and </li>
-		<li> write demotions. </li>
-	      </ul>
-	    </section>
-
-	    <section>
-              <h1>Reserve Dependencies</h1>
-
-	      <p>Consider:</p>
-
-		<pre><code>TM_WRITE_RESERVE(A)
-# ...
-TM_READ_RESERVE(B)</code></pre>
-
-	      <p>Write reservation of A always precedes reservation of B.</p>
-	      <ul>
-	      <li>B's reservation succeeds iff A's write reserve succeeds.</li>
-		  <li>If B is the last reservation, then<br>
-	      <span style="margin-left:4em">we can eliminate reservation of B.</span></li>
-	      </ul>
-	      <p style="margin-bottom:1em">Bonus: no need for undo log tracking.</p>
-	      <p>Reserve dependency optimization improved benchmark results.</p>
-
-	      
-	    </section>
-
-	    <section>
-              <h1>Write Demotions</h1>
-	      <p>Consider:</p>
-		<pre><code># x already contains 5
-TM_WRITE(x, 5);</code></pre>
-	      <p>In this case, a <em>read reservation</em> suffices.</p>
-	      <p>Our reserve API thus enables greater concurrency for x.</p>
-<aside class="notes">
-Note that we are doing a TM_WRITE without a write reservation. We are augmenting the standard API with reservations. This translates to a writer reservation followed by a direct access write. Note that you typically only want to do an explicit write reservation if you are going to do multiple explicit writes.
-</aside>
-	    </section>
-
-	  </section>
-<!--------------------------------------------->
-<!--------------------------------------------->
-          <section>
-            <section>
-              <h1>Implementing RR-TM: Bytelocks</h1>
-
-	      <p>Reservations and releases require extensions </p>
-	      <p style="margin-left:1em">to underlying lock implementation.</p>
-	      <p>We extended TLRW (implemented by RSTM).</p>
-	      <p style="margin-bottom:1em">Highly-performant read/write lock implementation: byte-locks.</p>
-
-	      <p style="font-size:smaller; margin-left:1em">(eager byte-locks, encounter-time locking upon access, free upon commit.)</p>
-
-	    </section>
-            <section>
-              <h1>Bytelock data structure</h1>
-
-	      <p>We redesigned bytelocks for our 64-hardware-thread system.</p>
-
-	      <img src="images/bytelocks-highlight.png" style="border:0; height:400px">
-	      <p>(also, no unslotted threads)</p>
-	      <aside class="notes">RSTM doesn't have unslotted threads either. two cache lines, but only 1 for the byte array containing locks.</aside>
-
-	    </section>
-
-            <section>
-              <h1 style="margin-bottom:.5em">Active Readers</h1>
-
-	      <img src="images/bytelocks-active-readers.png" style="border:0; height:300px">
-
-	      <p>Per-thread reserve &amp; release flags indicate <em>active readers</em>.</p>
-
-	      <p>Reserve: thread is active, may perform privatized READ access.</p>
-	      <p style="margin-bottom:1em">Release: thread no longer active, but not yet committed.</p>
-	    </section>
-
-            <section>
-              <h1>Acquiring a write reservation</h1>
-
-	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:300px">
-
-	      <ol>
-	      <li>Compare-and-swap to set owner field (if not already owned).</li>
-	      <li>Clear own reserve and release flags.</li>
-	      <li>Scan for any other active readers; stall until there are none.</li>
-	      <li>If any release flags set, set the per-lock released field.</li>
-	      </ol>
-
-	    </section>
-
-            <section>
-              <h1>Write reservation: guarantees</h1>
-
-	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:300px">
-
-	      <p>If you have a writer lock, <br><span style="margin-left:1em">no other transaction may read or write to that address.</span></p>
-	      <p>Hence, you may freely modify that address<br> without additional instrumentation.</p>
-<aside class="notes">
-- Guarantee that no other transaction may read or writer is ensured by the compiler when instrumenting code. Manual/poor instrumentation could break this conditions. (May not need to state this, must just keep it in mind).
-</aside>
-	    </section>
-
-            <section>
-              <h1>Acquiring a read reservation</h1>
-	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:300px">
-
-	      <ol>
-	      <li>Atomically set own reserve flag.</li>
-	      <li>Inspect per-lock owner field.</li>
-	      <li>If lock held elsewhere, and own release flag set, abort.</li>
-	      <li>If lock held elsewhere, and own release flag unset, <br><span style="padding-left:1em">clear reserve flag and retry.</span></li>
-	      </ol>
-	    </section>
-
-            <section>
-              <h1>Read reservation: guarantees</h1>
-
-	      <img src="images/bytelocks-write-reserve.png" style="border:0; height:300px">
-
-	      <p>Once you hold a reader lock,<br><span style="padding-left:1em"> contents are guaranteed to not change.</span></p>
-	      <p>You may freely read locked address<br> without additional instrumentation.</p>
-
-			</section>
-
-            <section>
-              <h1>Performing a memory release</h1>
-	      <img src="images/bytelocks-release.png" style="border:0; height:300px">
-
-	      <p>You must hold active reader lock.</p>
-	      <p>Set your release flag, clear your reserve flag.</p>
-			</section>
-
-            <section>
-              <h1>Committing a transaction</h1>
-	      <p style="margin-bottom:1em">Must free read and write locks.</p>
-	      <p style="margin-bottom:1em">Readers: clear reserve and release flags for all held locks.</p>
-	      <p>Writers:</p>
-	      <ol>
-		<li>scan write locks, check per-lock released fields.</li>
-		<li>if released field set, perform commit-time validation.</li>
-		<li>free read locks, clear owner field on write locks.</li>
-	      </ol>
-			</section>
-
-            <section>
-              <h1>Why commit-time validation?</h1>
-
-			  <p>Recall: we want to have a ordering between transactions.</p>
-			  <p>Releases impose an ordering: writers after readers.</p>
-			</section>
-
-	  </section>
-<!--------------------------------------------->
-<!--------------------------------------------->
-          <section>
-            <section>
-              <h1>Evaluation</h1>
-
-	    </section>
-
-<!--------------------------------------------->
-            <section>
-              <h1>Experimental Setup</h1>
-
-	      <p>STAMP benchmark suite.</p>
-	      <p>64 hardware threads, 4 NUMA nodes.</p>
-	      <p style="margin-bottom:1em">Conservative evaluation: no thread scheduler (hard affinitize.)</p>
-	      <p>Our comparison:</p>
-		  <ul>
-		    <li>RR-TM &mdash; Reservations &amp; Releases</li>
-		    <li>ByteEager &mdash; Read &amp; Write with eager versioning</li>
-		    <li>ByteLazy &mdash; Read &amp; Write with lazy versioning</li>
-		  </ul>
-
-	    </section>
-
-<!--------------------------------------------->
-            <section>
-              <h1>RR-TM achieves 2.73x mean speedup</h1>
-
-	      <img style="border:0" src="images/max-speedups.png">
-
-	      <p>Maximal speedup across thread counts.</p>
-	      <ul>
-		<li>RR-TM: geometric mean speedup 2.73x</li>
-		<li>ByteLazy: geometric mean speedup 2.43x</li>
-		<li>ByteEager: geometric mean speedup 1.93x</li>
-	      </ul>
-
-	    </section>
-
-            <section>
-              <h1>RR-TM speeds up small transactions: kmeans</h1>
-			  <img src="images/kmeans.png">
-			  <img src="images/legend.png">
-
-			</section>
-
-			<section>
-			  <h1>kmeans analysis</h1>
-
-			  <p>3 transactions; 2 simply increment globals.</p>
-<pre><code>// main transaction: increment length, sum objects
-TM_BEGIN();
-long val = TM_READ(&*new_centers_len[index]);
-val += 1
-TM_WRITE(&*new_centers_len[index], val);
-for (j = 0; j < nfeatures; j++) {
-  val = TM_READ(&new_centers[index][j]);
-  val += feature[i][j];
-  TM_WRITE(&new_centers[index][j], val);
-}
-TM_END();
-</code></pre>
-			  <p>Using reservations: </p>
-			  <ul>
-				<li>move write reservation before first read</li>
-				<li>omit instrumentation inside loops</li>
-			  </ul>
-			  <p>Result: only need single write reservation per transaction.</p>
-
-			</section>
-
-            <section>
-              <h1 style="margin-bottom:0.5em">RR-TM avoids livelocks: <br> genome, bayes, intruder, yada</h1>
-			  <img src="images/yada-bayes-intruder-genome.png" style="height:450px"><br>
-			  <img src="images/legend.png" style="height:30px">
-			</section>
-
-            <section>
-              <h1>Bad benchmark case study: vacation</h1>
-			  <p>Large read set due to red-black tree accesses.</p>
-			  <p>Write demotions fulfilled 6% of writes with read reserves.</p>
-			  <img src="images/vacation-unopt.png">
-			  <img src="images/legend.png" style="height:30px">
-			</section>
-
-            <section>
-              <h1>Improving vacation: <br> RR-TM becomes competitive</h1>
-			  <p>vacation often unnecessarily re-read released addresses.</p>
-			  <p>We manually removed redundant work:</p>
-
-			  <img src="images/vacation-opt.png">
-			  <img src="images/legend.png" style="height:30px">
-
-			</section>
-
-            <section>
-              <h1>Already privatized: labyrinth, ssca2</h1>
-			  <p>labyrinth already uses privatization.</p>
-			  <p>ssca2 executes mostly outside of transactions.</p>
-			  <img src="images/labyrinth-ssca2.png">
-			  <img src="images/legend.png" style="height:30px">
-	    </section>
-
-
-	  </section>
-<!--------------------------------------------->
-<!--------------------------------------------->
-          <section>
-            <section>
-              <h1>Related Work</h1>
-
-			  <p>Our main novelty: reservations plus releases for eager STM.</p>
-			</section>
-
-            <section>
-              <h1>Related Work: &ldquo;static&rdquo; reservations</h1>
-
-	      <p>Initial work on STM [ST95] contained a notion of reservations:<br>
-		<span style="margin-left:1em">must declare all accessed addresses upon transaction entry.</span></p>
-	      <p>Such a notion was impractical for dynamic data structures.</p>
-	      <p>Our notion is dynamic and applies to an eager system.</p>
-	    </section>
-
-            <section>
-              <h1>Related Work: decomposing locks &amp; <br>accesses</h1>
-	      <p>Notion of &ldquo;lock first, access later&rdquo; appears in [HP+96], [SA+06].</p>
-	      <p>Our work focusses on eager STM &amp; uninstrumented accesses.</p>
-	      <p>Also, we make stronger privatization guarantees by specialization the API.</p>
-	    </section>
-
-            <section>
-              <h1>Related Work: DSTM releases</h1>
-	      <p>Early releases first appeared in DSTM [HL+03].</p>
-	      <p>Idea: remove addresses from the read set of a transaction.</p>
-	      <p>These releases were manually inserted; domain knowledge ensured safety.</p>
-	      <p style="margin-left:1em">e.g.: release parent nodes in a tree traversal.</p>
-	      <p style="margin-top:1em">RR-TM releases could be mechanically applied,</p>
-	      <p style="margin-left:1em">in tandem with reservations.</p>
-	      <p>Applicable to any read &mdash; transactions may re-reserve an address.</p>
-	      <p>DSTM: no commit-time validation;<br> RR-TM: requires commit-time validation.</p>
-	    </section>
-
-            <section>
-              <h1>Related Work: privatization</h1>
-
-	      <p>Originally from lock-based concurrency control.</p>
-	      <p>Our contribution: </p>
-	      <blockquote>explicit, domain-knowledge-free privatization through reservations and releases.</blockquote>
-	    </section>
-
-	  </section>
-<!--------------------------------------------->
-<!--------------------------------------------->
-          <section>
-            <section>
-              <h1>Conclusions</h1>
-
-	      <p style="margin-bottom:1em">RR-TM improves performance and scalability of eager STMs.</p>
-	      <p>Key idea: temporary privatization &mdash; combine reserves, releases.</p>
-
-	      <ul style="margin-bottom:1em">
-		<li>Reservations allow instrumentation-free shared memory.</li>
-		<li>Releases enable additional reader/writer concurrency.</li>
-	      </ul>
-
-	      <p>With RR-TM, eager STMs competitive with lazy.</p>
-
-
-	    </section>
-
-	  </section>
-<!--------------------------------------------->
-<!--------------------------------------------->
-
+        <div style="padding-left: 10px">
+           <h1>Today's Goal</h1>
+           <p>Today, the SE program is extremely successful.</p>
+           <p>&nbsp;</p>
+           <p style="font-size:36pt">Where should we go from here?</p>
+           <ul>
+             <li>adjustments to courses?</li>
+             <li>non-technical adjustments?</li>
+           </ul>
+        </div>
+      </section>
+
+      <section>
+        <div style="padding-left: 10px">
+           <h1>Key Design Features of SE</h1>
+           <p>Engineering or Math? Both!</p>
+           <ul>
+           <li>SE students meet almost all BCS requirements.</li>
+           <li>SE students get foundational Engineering background.</li>
+           </ul>
+           <p style="padding-top:2em">In practice:<br>&nbsp;&nbsp;SE students feel more connection to Engineering, <br>&nbsp;&nbsp;but take more CS electives.</p>
+        </div>
+      </section>
+
+      <section style="background-image:url(images/lessons-learned.png); background-size:100%; min-height:768px">
+        <h2>&nbsp;</h2>
+        <div>
+        <p style="padding-left:20em; padding-top: 14em" >credit: Jo Atlee</p>
+        </div>
+      </section>
+
+      <section>
+        <div style="padding-left: 10px">
+           <h1>Accreditation</h1>
+           <p>SE Design Goal:</p>
+           <ul><li>PEng-able and CIPS-able.</li></ul>
+           <p style="padding-top:1em">Actual result:</p>
+           <ul><li>less than 1% of grads have PEng.</li></ul>
+           <p style="font-size:30px; padding-top: 7em; color:#888">(how should we formulate SE's raison d'&ecirc;tre?)</p>
+        </div>
+      </section>
+
+      <section style="background-image:url(images/se2021.jpg); background-repeat: no-repeat; background-size:100%; min-height:768px">
+           <h1>SE 2021</h1>
+      </section>
+
+      <section>
+           <h1>First-year Averages</h1>
+    <table style="text-align:right;">
+      <tr><td class="marks"></td><td class="marks">1A mean</td><td class="marks">1A 1st dec</td><td class="marks">1A fails</td><td class="marks">1B mean</td><td class="marks">1B 1st dec</td><td class="marks">1B fails</td></tr>
+      <tr><td class="marks">2016</td><td class="marks">75.5</td><td class="marks">90.3</td><td class="marks">9</td><td class="marks">71.4</td><td class="marks">88</td><td class="marks">22</td></tr>
+      <tr><td class="marks">2020</td><td class="marks">81.3</td><td class="marks">93.0</td><td class="marks">4</td><td class="marks">78.7</td><td class="marks">91.6</td><td class="marks">4</td></tr>
+      <tr><td class="marks">2021&nbsp;</td><td class="marks">85.4</td><td class="marks">95.8</td><td class="marks">2</td><td></td><td></td><td class="marks"></td></tr>
+    </table>
+      </section>
+
+      <section>
+           <h1>Diversity: % Females</h1>
+           <table style="text-align:right; margin-top:1em; margin-left: 5em; ">
+             <tr><td class="marks">Class</td><td class="marks">1A</td><td class="marks">4B</td><td></td></tr>
+             <tr><td class="marks">2006</td><td class="marks">17%</td><td class="marks">11%</td><td></td></tr>
+             <tr><td class="marks">2009</td><td class="marks">7%</td><td class="marks">5%</td><td>(=3 females)</td></td></tr>
+             <tr><td class="marks">2012</td><td class="marks">9%</td><td class="marks">10%</td><td></td></tr>
+             <tr><td class="marks">2015</td><td class="marks">13%</td><td class="marks">11%</td><td></td></tr>
+             <tr><td class="marks">2018</td><td class="marks">18%</td><td class="marks"><i style="color:#888;">15%</i></td><td><i style="color:#888;"> (4A)</i></td></tr>
+             <tr><td class="marks">2021</td><td class="marks">18%</td><td></td></tr>
+           </table>
+      </section>
+
+      <section>
+           <h1>Attrition</h1>
+           <table style="text-align:right; border-collapse:collapse;">
+             <tr><td class="attrition">Class</td><td class="attrition">1A</td><td class="attrition">4B</td><td class="attrition">retention</td><td></td></tr>
+             <tr><td class="attrition">2006</td><td class="attrition">102</td><td class="attrition">80</td><td class="attrition">78%</td><td></td></tr>
+             <tr><td class="attrition">2009</td><td class="attrition">105</td><td class="attrition">55</td><td class="attrition">52%</td><td></td></tr>
+             <tr><td class="attrition">2012</td><td class="attrition">116</td><td class="attrition">80</td><td class="attrition">69%</td><td></td></tr>
+             <tr><td class="attrition">2015</td><td class="attrition">137</td><td class="attrition">101</td><td class="attrition">74%</td><td></td></tr>
+             <tr><td class="attrition">2018</td><td class="attrition">151</td><td class="attrition"><i style="color:#888;">142</i></td><td class="attrition"><i style="color:#888">94%</i></td><td>&nbsp;(to 4A)</i></td></tr>
+             <tr><td class="attrition">2021</td><td class="attrition">130</td><td></td></tr>
+           </table>
+      </section>
+
+      <section>
+           <h1>Class of 2015: how many degrees?</h1>
+
+           <p>Initial (F10): 137; final (W15): 101 in 4B.</p>
+           <p>% graduated = 74</p>
+
+
+           <table style="border-collapse:collapse; width: 70%;">
+<tr><td class="degrees">BSE</td><td class="degrees">    89</td></tr>
+<tr><td class="degrees">BCS</td><td class="degrees">    10</td></tr>
+<tr><td class="degrees">dropout</td><td class="degrees">    23</td></tr>
+<tr><td class="degrees">incl. were registered in BCS</td><td class="degrees">    12</td></tr>
+<tr><td class="degrees">BMath (Aci Sci)</td><td class="degrees">    1</td></tr>
+<tr><td class="degrees">BMath (Comp Math, Stat)</td><td class="degrees">    1</td></tr>
+<tr><td class="degrees">BA (Econ)</td><td class="degrees">    1</td></tr>
+<tr><td class="degrees">BMath (Math Studies)</td><td class="degrees">    1</td></tr>
+<tr><td class="degrees">BASc ENVE</td><td class="degrees">    1</td></tr>
+<tr><td class="degrees">BASc MGMT</td><td class="degrees">    1</td></tr>
+<tr><td class="degrees">BSc</td><td class="degrees">2</td></tr>
+</table>
+       
+           <table style="text-align:right; border-collapse:collapse;">
+             <tr><td class="attrition">Class</td><td class="attrition">1A</td><td class="attrition">4B</td><td class="attrition">retention</td></tr>
+             <tr><td class="attrition">2006</td><td class="attrition">102</td><td class="attrition">80</td><td class="attrition">78%</td></tr>
+             <tr><td class="attrition">2009</td><td class="attrition">105</td><td class="attrition">55</td><td class="attrition">52%</td></tr>
+             <tr><td class="attrition">2012</td><td class="attrition">116</td><td class="attrition">80</td><td class="attrition">69%</td></tr>
+             <tr><td class="attrition">2015</td><td class="attrition">137</td><td class="attrition">101</td><td class="attrition">74%</td></tr>
+             <tr><td class="attrition">2018</td><td class="attrition">151</td><td class="attrition"><i style="color:#888;">142</i></td><td class="attrition">94% (to 4A)</td></tr>
+             <tr><td class="attrition">2021</td><td class="attrition">130</td><td></td></tr>
+           </table>
+      </section>
+
+      <section style="background-image:url(images/2017-exitsurvey-oncampus.png); background-repeat: no-repeat; background-size:100%; background-position: 0 3em; min-height:768px">
+        <h1>2017 Exit Survey</h1>
+           <div>
+           </div>
+      </section>
+
+      <section style="background-image:url(images/2017-exitsurvey-coop.png); background-repeat: no-repeat; background-size:100%; background-position: 0 3em; min-height:768px">
+        <h1>2017 Exit Survey</h1>
+           <div>
+           </div>
+      </section>
+
+      <section style="background-image:url(images/2017-exitsurvey-would-recommend.png); background-repeat: no-repeat; background-size:100%; background-position: 0 3em; min-height:768px">
+        <h1>2017 Exit Survey</h1>
+           <div>
+           </div>
+      </section>
+
+      <section>
+        <h1>Today's Agenda</h1>
+           <div>
+             <ul>
+               <li>Fitness for Future: are our SE grads well-prepared?</li>
+               <li>Student well-being and engagement: how to improve?</li>
+               <li>Curriculum: Year 1, Years 2-3, CS 247/SE 46[345] sequence</li>
+             </ul>
+           </div>
+      </section>
 
 	  </div>
 	  </div>
@@ -770,81 +235,6 @@ TM_END();
 	  <script src="lib/js/head.min.js"></script>
 	  <script src="js/reveal.min.js"></script>
         <script>
-/* from graffle.js example */
-Raphael.fn.connection = function (obj1, obj2, line, bg) {
-    if (obj1.line && obj1.from && obj1.to) {
-        line = obj1;
-        obj1 = line.from;
-        obj2 = line.to;
-    }
-    var bb1 = obj1.getBBox(),
-        bb2 = obj2.getBBox(),
-        p = [{x: bb1.x + bb1.width / 2, y: bb1.y - 1},
-        {x: bb1.x + bb1.width / 2, y: bb1.y + bb1.height + 1},
-        {x: bb1.x - 1, y: bb1.y + bb1.height / 2},
-        {x: bb1.x + bb1.width + 1, y: bb1.y + bb1.height / 2},
-        {x: bb2.x + bb2.width / 2, y: bb2.y - 1},
-        {x: bb2.x + bb2.width / 2, y: bb2.y + bb2.height + 1},
-        {x: bb2.x - 1, y: bb2.y + bb2.height / 2},
-        {x: bb2.x + bb2.width + 1, y: bb2.y + bb2.height / 2}],
-        d = {}, dis = [];
-    for (var i = 0; i < 4; i++) {
-        for (var j = 4; j < 8; j++) {
-            var dx = Math.abs(p[i].x - p[j].x),
-                dy = Math.abs(p[i].y - p[j].y);
-            if ((i == j - 4) || (((i != 3 && j != 6) || p[i].x < p[j].x) && ((i != 2 && j != 7) || p[i].x > p[j].x) && ((i != 0 && j != 5) || p[i].y > p[j].y) && ((i != 1 && j != 4) || p[i].y < p[j].y))) {
-                dis.push(dx + dy);
-                d[dis[dis.length - 1]] = [i, j];
-            }
-        }
-    }
-    if (dis.length == 0) {
-        var res = [0, 4];
-    } else {
-        res = d[Math.min.apply(Math, dis)];
-    }
-    var x1 = p[res[0]].x,
-        y1 = p[res[0]].y,
-        x4 = p[res[1]].x,
-        y4 = p[res[1]].y;
-    dx = Math.max(Math.abs(x1 - x4) / 2, 10);
-    dy = Math.max(Math.abs(y1 - y4) / 2, 10);
-    var x2 = [x1, x1, x1 - dx, x1 + dx][res[0]].toFixed(3),
-        y2 = [y1 - dy, y1 + dy, y1, y1][res[0]].toFixed(3),
-        x3 = [0, 0, 0, 0, x4, x4, x4 - dx, x4 + dx][res[1]].toFixed(3),
-        y3 = [0, 0, 0, 0, y1 + dy, y1 - dy, y4, y4][res[1]].toFixed(3);
-    var path = ["M", x1.toFixed(3), y1.toFixed(3), "C", x2, y2, x3, y3, x4.toFixed(3), y4.toFixed(3), 
-                "L", (x4 - res[1]*3).toFixed(3), (y4 - res[1]*1.5).toFixed(3),
-                "M", x4.toFixed(3), y4.toFixed(3),
-                "L", (x4 - res[1]*3).toFixed(3), (y4 + res[1]*1.5).toFixed(3)].join(",");
-    if (line && line.line) {
-        line.bg && line.bg.attr({path: path});
-        line.line.attr({path: path});
-    } else {
-        var color = typeof line == "string" ? line : "#fff";
-        return {
-            bg: bg && bg.split && this.path(path).attr({stroke: bg.split("|")[0], fill: "none", "stroke-width": bg.split("|")[1] || 3}),
-            line: this.path(path).attr({stroke: color, fill: "none"}),
-            from: obj1,
-            to: obj2
-        };
-    }
-};
-
-var el;
-window.onload = function () {
-    var r = Raphael("linked-list", 640, 100),
-        connections = [],
-        labels = [],
-        shapes = [];
-    for (var i = 0; i < 4; i++) {
-        labels.push(r.text(i*150+75, 50, "n"+(i+1).toString()).attr({"font-size": 20}));
-        shapes.push(r.ellipse(i*150+75, 50, 20, 20));
-        if (i > 0) connections.push(r.connection(shapes[i-1], shapes[i], "#000"));
-    }
-    connections.push(r.connection(r.path(["M", 0, 50]), shapes[0], "#000"));
-};
-
 // reveal
 Reveal.initialize({
 
