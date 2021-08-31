@@ -1,0 +1,22 @@
+{
+    "title": "State of the Software Engineering Program, 2017",
+    "description": "",
+    "author": "Patrick Lam",
+    "options": {
+        "theme": "simple",
+        "transition": "none",
+        "controls": true,
+        "progress": true,
+        "history": true,
+        "center": false
+    },
+    "plugins": [
+        "markdown",
+        "notes"
+    ],
+    "meta": {
+        "apple-mobile-web-app-capable": "yes",
+        "apple-mobile-web-app-status-bar-style": "black-translucent",
+        "viewport": "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui"
+    }
+}
